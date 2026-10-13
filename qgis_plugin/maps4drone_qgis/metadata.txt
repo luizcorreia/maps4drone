@@ -1,0 +1,19 @@
+[general]
+name=maps4drone
+qgisMinimumVersion=3.28
+qgisMaximumVersion=4.99
+supportsQt6=True
+description=Survey and mapping waypoint missions for drones (Potensic Atom 2 first)
+version=0.1.0
+author=Luiz Correia
+email=luiz@luizcorreia.eti.br
+about=Processing algorithms that plan survey grids, double grids, corridors, orbits and facades for drones, with terrain following from a DEM raster, and write the mission files for the Potensic Atom 2 (Potensic Eve app). Output layers with the flight line and waypoints are created for review. Requires Python 3.10+ and the shapely>=2 and pyproj packages. Always test new plans in a small open area and follow local aviation rules.
+tracker=https://github.com/luizcorreia/maps4drone/issues
+repository=https://github.com/luizcorreia/maps4drone
+tags=drone,uav,photogrammetry,flight plan,waypoints,mapping,survey
+homepage=https://github.com/luizcorreia/maps4drone
+category=Plugins
+icon=icon.svg
+experimental=True
+deprecated=False
+hasProcessingProvider=yes

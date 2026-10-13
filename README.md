@@ -36,6 +36,14 @@ com o mesmo intervalo antes de voar (o programa lembra você).
 uv venv && uv pip install -e ".[dev]"
 ```
 
+## Interfaces
+
+- **CLI** (abaixo).
+- **Web:** `uv pip install -e ".[web]" && maps4drone-web` abre um editor com mapa, abas e
+  estatísticas, parecido com a referência. Veja [docs/web.md](docs/web.md).
+- **Plugin QGIS:** algoritmos de Processing que geram camadas e a pasta da missão. Veja
+  [docs/qgis.md](docs/qgis.md). Build: `python scripts/build_qgis_plugin.py`.
+
 ## Uso
 
 ```sh
@@ -81,11 +89,13 @@ Detalhes do formato em [docs/atom2-format.md](docs/atom2-format.md).
 .venv/bin/ruff check src tests && .venv/bin/mypy && .venv/bin/pytest
 ```
 
-A lógica fica em `src/maps4drone` sem dependência de QGIS ou web, para poder ser usada
+A lógica fica em `src/maps4drone` (fora de `web/`) sem dependência de QGIS ou web, para poder ser usada
 por qualquer interface.
 
 ## O que ainda não foi validado em voo
 
+- O plugin QGIS foi testado em QGIS 4.2 sem interface gráfica; a interface web teve só a
+  página carregada e a API exercitada (cliques no mapa não foram automatizados).
 - O formato do Atom 2 foi reconstruído de um arquivo real exportado do app e de
   engenharia reversa da comunidade; ele pode mudar com o firmware.
 - Convenções de `yaw` (graus, referência norte) usadas em `orbit` e `facade` e a altura

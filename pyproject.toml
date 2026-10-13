@@ -1,0 +1,39 @@
+[project]
+name = "maps4drone"
+version = "0.1.0"
+description = "Open source survey/mapping waypoint generator for drones (Potensic Atom 2 first)"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.10"
+dependencies = ["shapely>=2.0", "pyproj>=3.6"]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "ruff>=0.6", "mypy>=1.10"]
+
+[project.scripts]
+maps4drone = "maps4drone.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/maps4drone"]
+
+[tool.ruff]
+line-length = 100
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+
+[tool.mypy]
+strict = true
+files = ["src"]
+
+[[tool.mypy.overrides]]
+module = ["shapely.*", "pyproj.*"]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

@@ -9,13 +9,18 @@ import { TaskPicker } from "./ui/TaskPicker";
 export function App() {
   const loadDrones = useStore((s) => s.loadDrones);
   const loadTask = useStore((s) => s.loadTask);
+  const setProject = useStore((s) => s.setProject);
   const task = useStore((s) => s.task);
   const webodm = insideWebodm();
   useEffect(() => {
     void loadDrones();
-    const taskId = new URLSearchParams(window.location.search).get("task");
-    if (taskId) void loadTask(taskId);
-  }, [loadDrones, loadTask]);
+    const query = new URLSearchParams(window.location.search);
+    const taskId = query.get("task");
+    const projectId = Number(query.get("project"));
+    if (taskId)
+      void loadTask(taskId); // brings its project along
+    else if (webodm && Number.isInteger(projectId) && projectId > 0) void setProject(projectId);
+  }, [loadDrones, loadTask, setProject, webodm]);
 
   return (
     <div className="app">

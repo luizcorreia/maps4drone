@@ -35,8 +35,8 @@ export function TaskPicker() {
   const task = useStore((s) => s.task);
   const loadTask = useStore((s) => s.loadTask);
   const clearTask = useStore((s) => s.clearTask);
-  const [chosen, setChosen] = useState<number | null>(null);
-  const projectId = chosen ?? (task ? Number(task.project) : null);
+  const projectId = useStore((s) => s.projectId);
+  const setProject = useStore((s) => s.setProject);
 
   const projects: WebodmProject[] | null = useAsync(() => fetchProjects(), "projects");
   const tasks: WebodmTask[] | null = useAsync(
@@ -44,11 +44,21 @@ export function TaskPicker() {
     projectId,
   );
 
-  const pick = (id: string) => {
+  /** Keeps the address in step with the choice, so a reload or a shared link comes back to it. */
+  const writeAddress = (project: number | null, taskId: string) => {
     const url = new URL(window.location.href);
-    if (id) url.searchParams.set("task", id);
-    else url.searchParams.delete("task");
+    for (const [key, value] of [
+      ["project", project?.toString() ?? ""],
+      ["task", taskId],
+    ] as const) {
+      if (value) url.searchParams.set(key, value);
+      else url.searchParams.delete(key);
+    }
     window.history.replaceState(null, "", url);
+  };
+
+  const pick = (id: string) => {
+    writeAddress(projectId, id);
     if (id) void loadTask(id);
     else clearTask();
   };
@@ -63,8 +73,9 @@ export function TaskPicker() {
           value={projectId ?? ""}
           onChange={(e) => {
             const id = e.target.value ? Number(e.target.value) : null;
-            setChosen(id);
-            if (id === null) pick("");
+            void setProject(id);
+            if (task && Number(task.project) !== id) clearTask(); // that task is of another project
+            writeAddress(id, task && Number(task.project) === id ? task.id : "");
           }}
         >
           <option value="">Sem projeto (mapas públicos)</option>

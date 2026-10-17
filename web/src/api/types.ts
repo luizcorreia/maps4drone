@@ -135,6 +135,20 @@ export interface WebodmTask {
   available_assets: string[] | null;
 }
 
+/** A flight plan kept on the server, under a WebODM project. */
+export interface SavedPlan {
+  id: string;
+  name: string;
+  request: PlanRequest;
+  /** "flown" once it is tied to the task that processed its photos. */
+  status: "planned" | "flown";
+  task_id: string | null;
+  created_at: string;
+  created_by: string;
+  updated_at: string;
+  updated_by: string;
+}
+
 export interface MissionFile {
   blob: Blob;
   filename: string;

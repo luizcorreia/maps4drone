@@ -39,6 +39,11 @@ ao plugin responde 404 de forma intermitente.
   **projeto** e a **tarefa** (só aparecem as concluídas que têm ortofoto, DSM ou DTM) para planejar
   sobre ela; "Sem projeto" volta aos mapas públicos (rua, satélite, híbrido) e à elevação online.
   O botão **← WebODM** volta ao painel, direto ao projeto quando há tarefa aberta.
+- **Planos salvos:** escolhido um projeto (mesmo sem nenhuma tarefa, antes das fotos), aparece no topo do
+  painel a barra do plano: dê um nome e **Salve**, reabra pela lista de planos salvos, **Duplique**,
+  **Apague** ou comece um **Novo**. O indicador mostra se há alterações não salvas, e o programa
+  pergunta antes de descartá-las. Os planos são do projeto: quem pode ver o projeto os vê, e quem
+  pode alterá-lo salva e apaga. O endereço guarda o projeto (`?project=<id>`) e a tarefa.
 - Os quatro passos são os da [interface web](web.md). Em **Ajustes**, ao ligar "Acompanhar o
   terreno" e marcar a decolagem, escolha o **modelo de elevação**: DSM do projeto (padrão, já passa
   por cima de árvores e construções), DTM do projeto (só o chão) ou online. O DTM só existe se a

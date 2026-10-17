@@ -43,7 +43,20 @@ beforeEach(() => {
     ),
   );
   vi.mocked(client.fetchTask).mockResolvedValue(TASK);
-  useStore.setState({ task: null, demSource: "online", points: [], status: "idle", error: null });
+  vi.mocked(client.fetchPlans).mockResolvedValue([]);
+  useStore.setState({
+    task: null,
+    demSource: "online",
+    points: [],
+    status: "idle",
+    error: null,
+    projectId: null,
+    plans: [],
+    planId: null,
+    planName: "",
+    savedSnapshot: null,
+    plansError: null,
+  });
   window.history.replaceState(null, "", "/plugins/maps4drone/index.html");
 });
 
@@ -76,7 +89,8 @@ describe("TaskPicker", () => {
     await userEvent.selectOptions(screen.getByLabelText("Projeto do WebODM"), "1");
     await userEvent.selectOptions(await screen.findByLabelText("Tarefa do projeto"), "t1");
     expect(client.fetchTask).toHaveBeenCalledWith("t1");
-    expect(window.location.search).toBe("?task=t1");
+    expect(window.location.search).toBe("?project=1&task=t1");
+    expect(client.fetchPlans).toHaveBeenCalledWith(1); // the project's plans come along
   });
 
   it("says when a project has nothing to plan over", async () => {
@@ -89,18 +103,37 @@ describe("TaskPicker", () => {
   });
 
   it("leaves the task for the public maps", async () => {
-    useStore.setState({ task: TASK });
-    window.history.replaceState(null, "", "/plugins/maps4drone/index.html?task=t1");
+    useStore.setState({ task: TASK, projectId: 1 });
+    window.history.replaceState(null, "", "/plugins/maps4drone/index.html?project=1&task=t1");
     render(<TaskPicker />);
     await screen.findByRole("option", { name: "Primeiro projeto" });
     expect(screen.getByLabelText("Projeto do WebODM")).toHaveValue("1"); // follows the open task
     await userEvent.selectOptions(screen.getByLabelText("Projeto do WebODM"), "");
-    expect(useStore.getState().task).toBeNull();
+    expect(useStore.getState()).toMatchObject({ task: null, projectId: null });
     expect(window.location.search).toBe("");
   });
 });
 
+describe("a task of another project", () => {
+  it("is dropped when the project changes, keeping the new project in the address", async () => {
+    useStore.setState({ task: TASK, projectId: 1 });
+    window.history.replaceState(null, "", "/plugins/maps4drone/index.html?project=1&task=t1");
+    render(<TaskPicker />);
+    await screen.findByRole("option", { name: "Vazio" });
+    await userEvent.selectOptions(screen.getByLabelText("Projeto do WebODM"), "2");
+    expect(useStore.getState()).toMatchObject({ task: null, projectId: 2 });
+    expect(window.location.search).toBe("?project=2");
+  });
+});
+
 describe("App inside WebODM", () => {
+  it("reopens the project named in the address, without a task", () => {
+    window.history.replaceState(null, "", "/plugins/maps4drone/index.html?project=4");
+    render(<App />);
+    expect(client.fetchPlans).toHaveBeenCalledWith(4);
+    expect(client.fetchTask).not.toHaveBeenCalled();
+  });
+
   it("links back to the dashboard, and to the project once a task is open", async () => {
     render(<App />);
     expect(screen.getByRole("link", { name: /WebODM/ })).toHaveAttribute("href", "/dashboard/");

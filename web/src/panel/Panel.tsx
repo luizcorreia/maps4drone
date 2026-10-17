@@ -1,9 +1,11 @@
 import { useState } from "react";
 
+import { insideWebodm } from "../api/client";
 import { modeInfo } from "../api/geometry";
 import { useStore } from "../store";
 import { AreaStep } from "./AreaStep";
 import { MissionStep } from "./MissionStep";
+import { PlanBar } from "./PlanBar";
 import { ReviewStep } from "./ReviewStep";
 import { SettingsStep } from "./SettingsStep";
 
@@ -19,6 +21,7 @@ export function Panel() {
   const mode = useStore((s) => s.mode);
   const points = useStore((s) => s.points.length);
   const status = useStore((s) => s.status);
+  const hasProject = useStore((s) => s.projectId !== null);
 
   const current = STEPS[index] ?? STEPS[0];
   const needsArea = points < modeInfo(mode).min;
@@ -27,6 +30,7 @@ export function Panel() {
 
   return (
     <aside className="panel" aria-label="Planejamento">
+      {insideWebodm() && hasProject && <PlanBar />}
       <ol className="stepper">
         {STEPS.map((step, i) => (
           <li key={step.id}>

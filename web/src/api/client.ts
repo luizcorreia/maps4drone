@@ -4,6 +4,7 @@ import type {
   MissionFile,
   PlanRequest,
   PlanResult,
+  SavedPlan,
   TaskContext,
   WebodmProject,
   WebodmTask,
@@ -131,4 +132,38 @@ export async function fetchProjectTasks(
   return (await (
     await request(`/api/projects/${projectId.toString()}/tasks/`, { signal })
   ).json()) as WebodmTask[];
+}
+
+const plansRoute = (projectId: number, suffix = "") =>
+  `${apiBase()}/project/${projectId.toString()}/plans${suffix}`;
+
+export async function fetchPlans(projectId: number, signal?: AbortSignal): Promise<SavedPlan[]> {
+  return (await (await request(plansRoute(projectId), { signal })).json()) as SavedPlan[];
+}
+
+/** Saves a plan; with an id it updates that plan, otherwise it creates a new one. */
+export async function savePlan(
+  projectId: number,
+  plan: { id?: string; name: string; request: PlanRequest },
+): Promise<SavedPlan> {
+  const { body, headers } = json(plan);
+  return (await (await post(plansRoute(projectId), body, headers)).json()) as SavedPlan;
+}
+
+export async function deletePlan(projectId: number, planId: string): Promise<void> {
+  await request(plansRoute(projectId, `/${encodeURIComponent(planId)}`), {
+    method: "DELETE",
+    headers: csrfHeaders(),
+  });
+}
+
+/** Ties the plan to a task of the same project, or unties it with null. */
+export async function linkPlanTask(
+  projectId: number,
+  planId: string,
+  taskId: string | null,
+): Promise<SavedPlan> {
+  const { body, headers } = json({ task: taskId });
+  const path = plansRoute(projectId, `/${encodeURIComponent(planId)}/task`);
+  return (await (await post(path, body, headers)).json()) as SavedPlan;
 }

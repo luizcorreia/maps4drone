@@ -1,7 +1,15 @@
 import { create } from "zustand";
 
-import { exportMission, fetchDrones, fetchTask, planMission } from "./api/client";
-import { modeInfo, toGeometry } from "./api/geometry";
+import {
+  deletePlan,
+  exportMission,
+  fetchDrones,
+  fetchPlans,
+  fetchTask,
+  planMission,
+  savePlan,
+} from "./api/client";
+import { modeInfo, pointsFromGeometry, toGeometry } from "./api/geometry";
 import type {
   Camera,
   DemSource,
@@ -12,6 +20,7 @@ import type {
   Params,
   PlanRequest,
   PlanResult,
+  SavedPlan,
   TaskContext,
 } from "./api/types";
 
@@ -61,10 +70,26 @@ interface State {
   /** The WebODM task the page was opened for, if any. */
   task: TaskContext | null;
   demSource: DemSource;
+  /** The WebODM project the plans are kept under; null for the public, unsaved mode. */
+  projectId: number | null;
+  plans: SavedPlan[];
+  /** The saved plan on the screen, or null for a drawing that was never saved. */
+  planId: string | null;
+  planName: string;
+  /** The name and request as last saved or opened, to tell whether anything changed since. */
+  savedSnapshot: string | null;
+  plansError: string | null;
+  plansBusy: boolean;
 
   loadDrones: () => Promise<void>;
   loadTask: (id: string) => Promise<void>;
   clearTask: () => void;
+  setProject: (id: number | null) => Promise<void>;
+  setPlanName: (name: string) => void;
+  savePlan: (options?: { asCopy?: boolean }) => Promise<void>;
+  openPlan: (id: string) => void;
+  newPlan: () => void;
+  removePlan: (id: string) => Promise<void>;
   setDemSource: (source: DemSource) => void;
   setMode: (mode: Mode) => void;
   setDrone: (id: string) => void;
@@ -102,6 +127,21 @@ export function selectRequest(
   }
   return request;
 }
+
+const snapshotOf = (name: string, request: PlanRequest | null): string | null =>
+  request ? JSON.stringify({ name: name.trim(), request }) : null;
+
+/** True when the drawing or its name differ from what was last saved (or was never saved). */
+export function selectDirty(
+  s: Pick<
+    State,
+    "mode" | "points" | "params" | "task" | "demSource" | "planName" | "savedSnapshot"
+  >,
+): boolean {
+  return snapshotOf(s.planName, selectRequest(s)) !== s.savedSnapshot;
+}
+
+const messageOf = (err: unknown): string => (err instanceof Error ? err.message : String(err));
 
 /** The project's own model if it has one: it is sharper than the online one and has no quota. */
 function defaultDemSource(task: TaskContext): DemSource {
@@ -179,6 +219,13 @@ export const useStore = create<State>()((set, get) => {
     fitSignal: 0,
     task: null,
     demSource: "online",
+    projectId: null,
+    plans: [],
+    planId: null,
+    planName: "",
+    savedSnapshot: null,
+    plansError: null,
+    plansBusy: false,
 
     loadDrones: async () => {
       let drones: Drone[];
@@ -197,9 +244,111 @@ export const useStore = create<State>()((set, get) => {
       try {
         const task = await fetchTask(id);
         set({ task, demSource: defaultDemSource(task) });
+        if (get().projectId !== Number(task.project)) await get().setProject(Number(task.project));
         replan();
       } catch (err) {
         set({ status: "error", error: err instanceof Error ? err.message : String(err) });
+      }
+    },
+
+    setProject: async (id) => {
+      set({ projectId: id, plans: [], planId: null, savedSnapshot: null, plansError: null });
+      if (id === null) return;
+      try {
+        const plans = await fetchPlans(id);
+        if (get().projectId === id) set({ plans });
+      } catch (err) {
+        if (get().projectId === id) set({ plansError: messageOf(err) });
+      }
+    },
+
+    setPlanName: (planName) => {
+      set({ planName });
+    },
+
+    savePlan: async ({ asCopy = false } = {}) => {
+      const { projectId, planId, planName } = get();
+      const request = selectRequest(get());
+      if (projectId === null) return;
+      const name = asCopy ? `${planName.trim()} (cópia)` : planName.trim();
+      if (!name) {
+        set({ plansError: "Dê um nome ao plano." });
+        return;
+      }
+      if (!request) {
+        set({ plansError: "Desenhe a área e confira os ajustes antes de salvar." });
+        return;
+      }
+      set({ plansBusy: true, plansError: null });
+      try {
+        const saved = await savePlan(projectId, {
+          ...(planId && !asCopy ? { id: planId } : {}),
+          name,
+          request,
+        });
+        if (get().projectId !== projectId) return;
+        set({
+          plans: [saved, ...get().plans.filter((p) => p.id !== saved.id)],
+          planId: saved.id,
+          planName: saved.name,
+          savedSnapshot: snapshotOf(saved.name, request),
+        });
+      } catch (err) {
+        set({ plansError: messageOf(err) });
+      } finally {
+        set({ plansBusy: false });
+      }
+    },
+
+    openPlan: (id) => {
+      const plan = get().plans.find((p) => p.id === id);
+      if (!plan) return;
+      const { mode, geometry, params, dem } = plan.request;
+      const drone = get().drones.find((d) => d.id === params.drone);
+      set({
+        mode,
+        points: geometry ? pointsFromGeometry(geometry) : [],
+        params: { ...(drone ? paramsForDrone(DEFAULT_PARAMS, drone) : DEFAULT_PARAMS), ...params },
+        demSource:
+          dem?.layer ?? (get().task ? defaultDemSource(get().task as TaskContext) : "online"),
+        planId: plan.id,
+        planName: plan.name,
+        plansError: null,
+        fitSignal: get().fitSignal + 1,
+      });
+      set({ savedSnapshot: snapshotOf(plan.name, selectRequest(get())) });
+      replan();
+    },
+
+    newPlan: () => {
+      set({
+        points: [],
+        planId: null,
+        planName: "",
+        savedSnapshot: null,
+        plansError: null,
+        plan: null,
+        status: "idle",
+        error: null,
+      });
+      replan();
+    },
+
+    removePlan: async (id) => {
+      const { projectId } = get();
+      if (projectId === null) return;
+      set({ plansBusy: true, plansError: null });
+      try {
+        await deletePlan(projectId, id);
+        const forgotten = get().planId === id;
+        set({
+          plans: get().plans.filter((p) => p.id !== id),
+          ...(forgotten ? { planId: null, savedSnapshot: null } : {}),
+        });
+      } catch (err) {
+        set({ plansError: messageOf(err) });
+      } finally {
+        set({ plansBusy: false });
       }
     },
 

@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import * as client from "./api/client";
-import type { Drone, PlanResult } from "./api/types";
-import { DEFAULT_PARAMS, selectRequest, useStore } from "./store";
+import type { Drone, PlanResult, SavedPlan } from "./api/types";
+import { DEFAULT_PARAMS, selectDirty, selectRequest, useStore } from "./store";
 
 vi.mock("./api/client");
 
@@ -49,6 +49,13 @@ beforeEach(() => {
     error: null,
     task: null,
     demSource: "online",
+    projectId: null,
+    plans: [],
+    planId: null,
+    planName: "",
+    savedSnapshot: null,
+    plansError: null,
+    plansBusy: false,
   });
 });
 
@@ -275,5 +282,177 @@ describe("selectRequest", () => {
 describe("export", () => {
   it("refuses when there is nothing to export", async () => {
     await expect(useStore.getState().exportMission()).rejects.toThrow("Nada para exportar");
+  });
+});
+
+const saved = (over: Partial<SavedPlan> = {}): SavedPlan => ({
+  id: "p1",
+  name: "Norte",
+  request: {
+    mode: "double_grid",
+    geometry: { type: "Polygon", coordinates: [[...SQUARE, SQUARE[0] as [number, number]]] },
+    params: { ...DEFAULT_PARAMS, drone: "atom2", altitude: 55 },
+  },
+  status: "planned",
+  task_id: null,
+  created_at: "2026-10-18T10:00:00+00:00",
+  created_by: "ana",
+  updated_at: "2026-10-18T10:00:00+00:00",
+  updated_by: "ana",
+  ...over,
+});
+
+describe("saved plans", () => {
+  beforeEach(() => {
+    vi.mocked(client.fetchPlans).mockResolvedValue([]);
+  });
+
+  it("loads a project's plans and forgets the previous project's", async () => {
+    vi.mocked(client.fetchPlans).mockResolvedValue([saved()]);
+    useStore.setState({ planId: "old", savedSnapshot: "x" });
+    await useStore.getState().setProject(4);
+    expect(client.fetchPlans).toHaveBeenCalledWith(4);
+    expect(useStore.getState()).toMatchObject({ projectId: 4, planId: null, savedSnapshot: null });
+    expect(useStore.getState().plans).toHaveLength(1);
+    await useStore.getState().setProject(null);
+    expect(useStore.getState()).toMatchObject({ projectId: null, plans: [] });
+  });
+
+  it("shows why the plans could not be loaded", async () => {
+    vi.mocked(client.fetchPlans).mockRejectedValue(new Error("Sem permissão"));
+    await useStore.getState().setProject(4);
+    expect(useStore.getState().plansError).toBe("Sem permissão");
+  });
+
+  it("ignores plans that arrive after the user moved to another project", async () => {
+    let finish: (plans: SavedPlan[]) => void = () => undefined;
+    vi.mocked(client.fetchPlans).mockImplementationOnce(
+      () =>
+        new Promise<SavedPlan[]>((resolve) => {
+          finish = resolve;
+        }),
+    );
+    const first = useStore.getState().setProject(4);
+    await useStore.getState().setProject(5);
+    finish([saved()]);
+    await first;
+    expect(useStore.getState()).toMatchObject({ projectId: 5, plans: [] });
+  });
+
+  it("will not save without a name, a drawing or a project", async () => {
+    await useStore.getState().setProject(4);
+    useStore.getState().setPlanName("Norte");
+    await useStore.getState().savePlan();
+    expect(useStore.getState().plansError).toMatch(/Desenhe/);
+    useStore.setState({ points: SQUARE, planName: "  " });
+    await useStore.getState().savePlan();
+    expect(useStore.getState().plansError).toMatch(/nome/);
+    expect(client.savePlan).not.toHaveBeenCalled();
+    useStore.setState({ projectId: null, planName: "Norte" });
+    await useStore.getState().savePlan();
+    expect(client.savePlan).not.toHaveBeenCalled();
+  });
+
+  it("saves a new plan, then updates it in place, and is clean right after", async () => {
+    await useStore.getState().setProject(4);
+    useStore.setState({ points: SQUARE });
+    useStore.getState().setPlanName(" Norte ");
+    expect(selectDirty(useStore.getState())).toBe(true);
+    vi.mocked(client.savePlan).mockResolvedValueOnce(saved({ name: "Norte" }));
+    await useStore.getState().savePlan();
+    const [project, body] = vi.mocked(client.savePlan).mock.calls[0] ?? [];
+    expect(project).toBe(4);
+    expect(body).toMatchObject({ name: "Norte", request: { mode: "grid" } });
+    expect(body).not.toHaveProperty("id");
+    expect(useStore.getState()).toMatchObject({ planId: "p1", planName: "Norte" });
+    expect(selectDirty(useStore.getState())).toBe(false);
+
+    useStore.getState().setParam("altitude", 70);
+    expect(selectDirty(useStore.getState())).toBe(true);
+    vi.mocked(client.savePlan).mockResolvedValueOnce(saved({ name: "Norte" }));
+    await useStore.getState().savePlan();
+    expect(vi.mocked(client.savePlan).mock.calls[1]?.[1]).toMatchObject({ id: "p1" });
+    expect(useStore.getState().plans).toHaveLength(1); // replaced, not duplicated
+    expect(selectDirty(useStore.getState())).toBe(false);
+  });
+
+  it("saves a copy as a new plan with its own name", async () => {
+    await useStore.getState().setProject(4);
+    useStore.setState({ points: SQUARE, planId: "p1", planName: "Norte" });
+    vi.mocked(client.savePlan).mockResolvedValueOnce(saved({ id: "p2", name: "Norte (cópia)" }));
+    await useStore.getState().savePlan({ asCopy: true });
+    const body = vi.mocked(client.savePlan).mock.calls[0]?.[1];
+    expect(body).toMatchObject({ name: "Norte (cópia)" });
+    expect(body).not.toHaveProperty("id");
+    expect(useStore.getState().planId).toBe("p2");
+  });
+
+  it("keeps the drawing and says why when the server refuses it", async () => {
+    await useStore.getState().setProject(4);
+    useStore.setState({ points: SQUARE, planName: "Norte" });
+    vi.mocked(client.savePlan).mockRejectedValueOnce(new Error("o projeto ja tem 200 planos"));
+    await useStore.getState().savePlan();
+    expect(useStore.getState()).toMatchObject({
+      plansError: "o projeto ja tem 200 planos",
+      plansBusy: false,
+      planId: null,
+    });
+    expect(useStore.getState().points).toEqual(SQUARE);
+  });
+
+  it("opens a plan: its mode, shape and settings come back, and nothing is unsaved", async () => {
+    vi.mocked(client.fetchPlans).mockResolvedValue([saved()]);
+    await useStore.getState().setProject(4);
+    useStore.getState().openPlan("p1");
+    const state = useStore.getState();
+    expect(state).toMatchObject({
+      mode: "double_grid",
+      planId: "p1",
+      planName: "Norte",
+      points: SQUARE,
+    });
+    expect(state.params.altitude).toBe(55);
+    expect(state.fitSignal).toBeGreaterThan(0);
+    expect(selectDirty(state)).toBe(false);
+    useStore.getState().addPoint([0, 0]);
+    expect(selectDirty(useStore.getState())).toBe(true);
+  });
+
+  it("falls back to the defaults for settings an older plan lacks", async () => {
+    const old = saved();
+    old.request.params = { drone: "atom2" } as typeof old.request.params;
+    vi.mocked(client.fetchPlans).mockResolvedValue([old]);
+    await useStore.getState().setProject(4);
+    useStore.getState().openPlan("p1");
+    expect(useStore.getState().params).toMatchObject({
+      drone: "atom2",
+      front: DEFAULT_PARAMS.front,
+    });
+  });
+
+  it("starts a new plan from a clean screen", async () => {
+    vi.mocked(client.fetchPlans).mockResolvedValue([saved()]);
+    await useStore.getState().setProject(4);
+    useStore.getState().openPlan("p1");
+    useStore.getState().newPlan();
+    expect(useStore.getState()).toMatchObject({
+      points: [],
+      planId: null,
+      planName: "",
+      savedSnapshot: null,
+    });
+    expect(selectDirty(useStore.getState())).toBe(false); // nothing drawn, nothing to lose
+  });
+
+  it("deletes a plan and forgets it when it was the open one", async () => {
+    vi.mocked(client.fetchPlans).mockResolvedValue([saved(), saved({ id: "p2", name: "Sul" })]);
+    await useStore.getState().setProject(4);
+    useStore.getState().openPlan("p1");
+    vi.mocked(client.deletePlan).mockResolvedValue(undefined);
+    await useStore.getState().removePlan("p2");
+    expect(client.deletePlan).toHaveBeenCalledWith(4, "p2");
+    expect(useStore.getState()).toMatchObject({ planId: "p1" }); // another plan stays open
+    await useStore.getState().removePlan("p1");
+    expect(useStore.getState()).toMatchObject({ planId: null, plans: [] });
   });
 });

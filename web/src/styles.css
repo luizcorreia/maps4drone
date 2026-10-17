@@ -785,3 +785,52 @@ button.link {
     max-width: 130px;
   }
 }
+
+/* ---- saved plans ---- */
+
+.plan-bar {
+  display: grid;
+  gap: 8px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  background: color-mix(in srgb, var(--accent) 6%, var(--surface));
+}
+
+.plan-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.plan-row input[type="text"],
+.plan-row select {
+  flex: 1;
+  min-width: 0;
+  padding: 7px 9px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface-2);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.875rem;
+}
+
+.plan-row button {
+  padding: 6px 12px;
+  font-size: 0.8125rem;
+}
+
+button.danger {
+  color: var(--danger);
+}
+
+.plan-state {
+  margin-left: auto;
+  color: var(--ok);
+  font-size: 0.75rem;
+  white-space: nowrap;
+}
+
+.plan-state-dirty {
+  color: var(--warn);
+}

@@ -171,6 +171,21 @@ describe("Panel", () => {
     expect(useStore.getState().demSource).toBe("online");
   });
 
+  it("shows the saved plans only inside WebODM, once a project is open", () => {
+    vi.mocked(client.insideWebodm).mockReturnValue(true);
+    useStore.setState({ projectId: null });
+    const { rerender } = render(<Panel />);
+    expect(screen.queryByRole("region", { name: "Plano de voo" })).not.toBeInTheDocument();
+    act(() => {
+      useStore.setState({ projectId: 4 });
+    });
+    rerender(<Panel />);
+    expect(screen.getByRole("region", { name: "Plano de voo" })).toBeInTheDocument();
+    vi.mocked(client.insideWebodm).mockReturnValue(false);
+    rerender(<Panel />);
+    expect(screen.queryByRole("region", { name: "Plano de voo" })).not.toBeInTheDocument();
+  });
+
   it("does not mention a model choice outside WebODM", async () => {
     useStore.setState({ points: SQUARE, params: { ...DEFAULT_PARAMS, terrain: true }, task: null });
     render(<Panel />);

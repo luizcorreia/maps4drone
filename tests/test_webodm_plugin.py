@@ -1,3 +1,4 @@
+import ast
 import importlib.util
 import json
 import shutil
@@ -164,3 +165,22 @@ def test_the_plugin_loads_its_button_script_and_guards_the_planner():
     source = (PLUGIN / "plugin.py").read_text()
     assert 'return ["main.js"]' in source
     assert "request.user.is_authenticated" in source and '.endswith("/main.js")' in source
+
+
+def test_webodm_can_find_the_plugin_class():
+    """WebODM does getattr(import_module("plugins.<dir>"), "Plugin"): the package must export it."""
+    assert (PLUGIN / "__init__.py").read_text().startswith("from .plugin import *")
+    tree = ast.parse((PLUGIN / "plugin.py").read_text())
+    classes = {
+        n.name: [b.id for b in n.bases if isinstance(b, ast.Name)]
+        for n in ast.walk(tree)
+        if isinstance(n, ast.ClassDef)
+    }
+    assert classes == {"Plugin": ["PluginBase"]}
+
+
+def test_the_manifest_has_nothing_that_could_hide_the_plugin():
+    """A webodmMinVersion above the running WebODM makes it skip the plugin without a word."""
+    manifest = json.loads((PLUGIN / "manifest.json").read_text())
+    assert "webodmMinVersion" not in manifest
+    assert {"name", "version", "description"} <= set(manifest)

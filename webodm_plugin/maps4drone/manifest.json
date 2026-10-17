@@ -1,12 +1,15 @@
 {
   "name": "maps4drone",
-  "webodmMinVersion": "3.3.1",
   "description": "Plan survey, corridor, orbit and facade flights for the Potensic Atom 2 and DJI drones over a project's orthophoto, following the terrain of its DSM or DTM.",
   "version": "0.1.0",
   "author": "maps4drone",
   "email": "",
   "repository": "",
-  "tags": ["flight-planning", "drone", "waypoints"],
+  "tags": [
+    "flight-planning",
+    "drone",
+    "waypoints"
+  ],
   "homepage": "",
   "experimental": true,
   "deprecated": false

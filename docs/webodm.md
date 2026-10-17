@@ -9,7 +9,9 @@ Fica em `webodm_plugin/maps4drone/` e reaproveita o núcleo (`src/maps4drone`), 
 
 ## Requisitos
 
-- WebODM 3.3.1 ou mais novo (o código foi escrito contra a versão 3.3.1).
+- Um WebODM com a API de plugins (`PluginBase`, `MountPoint`, `TaskView`): o código foi escrito contra a
+  versão 3.3.1 e o manifesto não fixa versão mínima, porque o WebODM esconde sem avisar um plugin
+  cuja versão mínima seja maior que a dele.
 - Nada a instalar no servidor além do plugin: o WebODM já traz Python 3.9, pydantic 1.10,
   pyproj, rasterio e Pillow. O `shapely>=2`, que o planejador usa, está no `requirements.txt` do
   plugin e o WebODM o instala ao ativar o plugin, então o contêiner precisa de internet nessa hora.

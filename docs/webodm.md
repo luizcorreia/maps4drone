@@ -27,6 +27,10 @@ No WebODM, entre como administrador: **Administration > Plugins > Load Plugin (.
 zip e ative o plugin na lista. Para atualizar, remova o plugin antigo e envie o novo (o WebODM
 recusa um nome que já existe).
 
+**Depois de instalar ou atualizar, reinicie o WebODM** (`docker restart webapp`). Ele guarda a lista de
+plugins na memória de cada processo, e enquanto algum processo não reinicia, parte das requisições
+ao plugin responde 404 de forma intermitente.
+
 ## Usar
 
 - Em cada tarefa com mapa (ortofoto, DSM ou DTM) aparece o botão **Planejar voo**. Ele abre o
@@ -52,6 +56,10 @@ Sob `/api/plugins/maps4drone/` (exige login no WebODM):
 | `GET camera?drone=&altitude=&camera=` | GSD e cobertura da câmera |
 | `POST import?name=arq.kml` | Corpo cru do arquivo; devolve o primeiro polígono e/ou linha |
 | `POST plan`, `POST export` | Como na [API web](web.md#api); terreno pela elevação online |
+| `GET project/<id>/plans` | Planos de voo salvos do projeto (exige permissão de ver o projeto) |
+| `POST project/<id>/plans` | Salva um plano `{name, request}`; com `id`, atualiza (exige permissão de alterar) |
+| `DELETE project/<id>/plans/<plano>` | Apaga o plano |
+| `POST project/<id>/plans/<plano>/task` | `{"task": "<id>"}` vincula o plano a uma tarefa do mesmo projeto (marca como realizado); `null` desvincula |
 | `GET task/<id>/info` | Nome, extensão, camadas disponíveis e URL das tiles da tarefa |
 | `POST task/<id>/plan`, `POST task/<id>/export` | Como acima, com `"dem": {"layer": "dsm"\|"dtm"}` para usar o modelo da tarefa |
 

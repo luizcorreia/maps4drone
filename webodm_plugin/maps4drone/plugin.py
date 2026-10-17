@@ -16,8 +16,12 @@ class Plugin(PluginBase):
     def main_menu(self):
         return [Menu("Planejar voo", self.public_url("index.html"), "fa fa-plane fa-fw")]
 
+    def include_js_files(self):
+        return ["main.js"]
+
     def serve_public_assets(self, request):
-        return request.user.is_authenticated
+        # main.js is loaded on every page, public shares included; the planner is for users
+        return request.user.is_authenticated or request.path.endswith("/main.js")
 
     def api_mount_points(self):
         # shapely may live in the plugin's own site-packages (see requirements.txt)

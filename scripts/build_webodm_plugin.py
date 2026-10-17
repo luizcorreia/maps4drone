@@ -1,8 +1,8 @@
 """Build dist/maps4drone-webodm-<version>.zip: the WebODM plugin plus the vendored core.
 
 Upload the zip in WebODM (Administration > Plugins > Load Plugin) or unpack its single
-`maps4drone/` folder into <media>/plugins/. The compiled UI goes in public/; it is added
-when `web/` has been built for the plugin (see docs/webodm.md).
+`maps4drone/` folder into <media>/plugins/. The compiled UI is added to public/ next to the
+plugin's own main.js, when `web/` has been built for it (see docs/webodm.md).
 """
 
 import argparse
@@ -36,7 +36,7 @@ def build(out_dir: Path, ui_dir: Path = DEFAULT_UI) -> Path:
     out_dir.mkdir(parents=True, exist_ok=True)
     target = out_dir / f"maps4drone-webodm-{plugin_version()}.zip"
     with zipfile.ZipFile(target, "w", zipfile.ZIP_DEFLATED) as z:
-        for path in _files(PLUGIN_DIR, skip_dirs=("vendor", "public")):
+        for path in _files(PLUGIN_DIR, skip_dirs=("vendor",)):
             z.write(path, f"{PLUGIN_NAME}/{path.relative_to(PLUGIN_DIR).as_posix()}")
         for path in _files(CORE_DIR, skip_dirs=("web",)):
             z.write(

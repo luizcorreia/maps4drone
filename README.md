@@ -41,6 +41,9 @@ uv venv && uv pip install -e ".[dev]"
 - **CLI** (abaixo).
 - **Web:** interface React em passos (missão, área, ajustes, revisão) com mapa, dados do voo
   e perfil de elevação, para o Atom 2 e drones DJI. Veja [docs/web.md](docs/web.md).
+- **Plugin WebODM:** o mesmo planejador dentro do WebODM, sobre a ortofoto do projeto e com o
+  terreno do DSM ou DTM dele. Veja [docs/webodm.md](docs/webodm.md). Build:
+  `python scripts/build_webodm_plugin.py`.
 - **Plugin QGIS:** algoritmos de Processing que geram camadas e a pasta da missão. Veja
   [docs/qgis.md](docs/qgis.md). Build: `python scripts/build_qgis_plugin.py`.
 

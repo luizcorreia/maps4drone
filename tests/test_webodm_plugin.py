@@ -1,5 +1,7 @@
 import importlib.util
 import json
+import shutil
+import subprocess
 import sys
 import zipfile
 from pathlib import Path
@@ -114,6 +116,51 @@ def test_the_build_ships_the_plugin_and_the_core_without_the_web_app(tmp_path):
         "maps4drone/vendor/maps4drone/service.py",
         "maps4drone/vendor/maps4drone/drones.json",
         "maps4drone/public/index.html",
+        "maps4drone/public/main.js",
     } <= names
     assert not any("/web/" in n for n in names if "vendor" in n)
     assert zip_path.name == f"maps4drone-webodm-{manifest['version']}.zip"
+
+
+NODE = shutil.which("node")
+
+
+@pytest.mark.skipif(NODE is None, reason="node is needed to run the button script")
+def test_the_task_button_opens_the_planner_on_that_task(tmp_path):
+    runner = tmp_path / "run.js"
+    runner.write_text(
+        """
+        const fs = require("fs");
+        let callback;
+        global.PluginsAPI = { Dashboard: { addTaskActionButton: (cb) => { callback = cb; } } };
+        global.React = { createElement: (type, props, ...children) => ({ type, props, children }) };
+        let href = null;
+        global.location = { set href(v) { href = v; }, get href() { return href; } };
+        eval(fs.readFileSync(process.argv[2], "utf8"));
+        const withMap = callback({ task: { id: "a b", available_assets: ["dsm.tif"] } });
+        withMap.props.onClick();
+        const results = {
+          type: withMap.type,
+          href,
+          without: callback({ task: { id: "x", available_assets: ["all.zip"] } }) === undefined,
+          none: callback({ task: { id: "x", available_assets: null } }) === undefined,
+        };
+        console.log(JSON.stringify(results));
+        """
+    )
+    out = subprocess.run(
+        [NODE, str(runner), str(PLUGIN / "public" / "main.js")], capture_output=True, text=True
+    )
+    assert out.returncode == 0, out.stderr
+    assert json.loads(out.stdout) == {
+        "type": "button",
+        "href": "/plugins/maps4drone/index.html?task=a%20b",
+        "without": True,
+        "none": True,
+    }
+
+
+def test_the_plugin_loads_its_button_script_and_guards_the_planner():
+    source = (PLUGIN / "plugin.py").read_text()
+    assert 'return ["main.js"]' in source
+    assert "request.user.is_authenticated" in source and '.endswith("/main.js")' in source

@@ -13,6 +13,7 @@ class Camera:
     focal_mm: float
     image_w: int
     image_h: int
+    rolling_shutter_ms: float = 0.0  # 0 = unknown or mechanical shutter
 
     def gsd_m(self, altitude_m: float) -> float:
         return self.sensor_w_mm * altitude_m / (self.focal_mm * self.image_w)
@@ -41,6 +42,8 @@ class Drone:
     max_speed_ms: float
     max_height_m: float
     shoot_intervals_s: tuple[float, ...]
+    export_format: str = "atom2"  # "atom2" or "dji"
+    dji_enums: tuple[int, int] | None = None  # (drone, payload) enum values for the WPML
 
     def camera(self, name: str | None = None) -> Camera:
         key = name or self.default_camera
@@ -56,6 +59,7 @@ def _parse(raw: dict[str, Any]) -> dict[str, Drone]:
     drones = {}
     for drone_id, d in raw.items():
         cameras = {k: Camera(name=k, **c) for k, c in d["cameras"].items()}
+        dji = d.get("dji")
         drones[drone_id] = Drone(
             id=drone_id,
             name=d["name"],
@@ -65,6 +69,8 @@ def _parse(raw: dict[str, Any]) -> dict[str, Drone]:
             max_speed_ms=d["max_speed_ms"],
             max_height_m=d["max_height_m"],
             shoot_intervals_s=tuple(d["shoot_intervals_s"]),
+            export_format=d.get("export_format", "atom2"),
+            dji_enums=(dji["drone_enum"], dji["payload_enum"]) if dji else None,
         )
     return drones
 

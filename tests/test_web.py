@@ -4,9 +4,10 @@ import zipfile
 from pathlib import Path
 
 import pytest
+from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from maps4drone.web.app import app, get_elevation
+from maps4drone.web.app import app, get_elevation, mount_ui
 
 FIXTURE = Path(__file__).parent / "fixtures" / "atom2_sample_mission.json"
 AREA = {
@@ -80,7 +81,7 @@ def test_plan_every_mode(client, mode, geometry, params):
     data = r.json()
     assert data["stats"]["waypoints"] == len(data["geojson"]["features"]) - 1
     assert data["geojson"]["features"][0]["geometry"]["type"] == "LineString"
-    assert set(data["stats"]["images"]) == {"3", "5"}
+    assert set(data["stats"]["images"]) == {"2", "3", "5"}
     assert data["speed"] > 0
 
 
@@ -166,7 +167,48 @@ def test_import_errors(client):
     assert r.status_code == 422
 
 
-def test_static_page_served(client):
-    r = client.get("/")
-    assert r.status_code == 200 and "maps4drone" in r.text
-    assert client.get("/app.js").status_code == 200
+def test_built_ui_is_served_at_the_root(tmp_path):
+    (tmp_path / "index.html").write_text("<title>maps4drone</title>")
+    (tmp_path / "app.js").write_text("console.log(1)")
+    ui = FastAPI()
+    mount_ui(ui, tmp_path)
+    web = TestClient(ui)
+    assert "maps4drone" in web.get("/").text
+    assert web.get("/app.js").status_code == 200
+
+
+def test_missing_build_explains_how_to_make_one(tmp_path):
+    ui = FastAPI()
+    mount_ui(ui, tmp_path / "nope")
+    r = TestClient(ui).get("/")
+    assert r.status_code == 200 and "npm run build" in r.text
+
+
+def test_area_too_small_is_a_readable_error(client):
+    tiny = {
+        "type": "Polygon",
+        "coordinates": [
+            [
+                [-51.9, -23.15],
+                [-51.89995, -23.15],
+                [-51.89995, -23.14995],
+                [-51.9, -23.14995],
+                [-51.9, -23.15],
+            ]
+        ],
+    }
+    r = post(client, "grid", tiny, altitude=100)
+    assert r.status_code == 422
+    assert "pequena demais" in r.json()["detail"]
+
+
+def test_elevation_rate_limit_is_reported_in_portuguese(client):
+    import urllib.error
+
+    def limited(points):
+        raise urllib.error.HTTPError("http://x", 429, "Too Many Requests", {}, None)  # type: ignore[arg-type]
+
+    app.dependency_overrides[get_elevation] = lambda: limited
+    r = post(client, "grid", AREA, terrain=True, takeoff=[-51.9, -23.15])
+    assert r.status_code == 502
+    assert "limitou as consultas" in r.json()["detail"]

@@ -4,25 +4,26 @@ import argparse
 import io
 import tempfile
 import time
+import urllib.error
 import zipfile
 from dataclasses import asdict
 from pathlib import Path
 from typing import Annotated, Any, Literal
 
 from fastapi import Depends, FastAPI, HTTPException, Request, Response
-from fastapi.responses import JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 from shapely.errors import ShapelyError
 from shapely.geometry import MultiPolygon, Polygon, mapping, shape
 from shapely.geometry.base import BaseGeometry
 
-from .. import atom2
+from .. import atom2, dji
 from ..camera import Drone, load_drones
 from ..elevation import Elevation, open_meteo_elevation
 from ..io import read_area, read_line
 from ..model import Mission, Waypoint
-from ..planners.common import finish
+from ..planners.common import EmptyRouteError, finish
 from ..planners.corridor import plan_corridor
 from ..planners.facade import plan_facade
 from ..planners.orbit import plan_orbit
@@ -53,7 +54,9 @@ class Params(BaseModel):
     altitude: float = Field(default=100, gt=0, le=500, description="height (m); orbit height too")
     front: float = Field(default=80, ge=0, lt=100, description="front overlap, %")
     side: float = Field(default=70, ge=0, lt=100, description="side overlap, %")
-    angle: float = Field(default=0, ge=0, lt=360, description="flight line bearing, 0 = north")
+    angle: float | None = Field(
+        default=None, ge=0, lt=360, description="line bearing, 0 = north; null = long axis"
+    )
     interval: float = 3
     pitch: float = Field(default=-90, ge=-90, le=20)
     margin: float = Field(default=0, ge=0, le=200)
@@ -146,7 +149,13 @@ def build_mission(req: PlanRequest, elevation: Elevation) -> Mission:
             raise ValueError("a area precisa ser um poligono")
         if not geom.is_valid:
             raise ValueError("poligono invalido: as linhas se cruzam")
-        mission = plan_survey(geom, drone, camera, params, terrain, p.takeoff)
+        try:
+            mission = plan_survey(geom, drone, camera, params, terrain, p.takeoff)
+        except EmptyRouteError as err:
+            raise ValueError(
+                "a area e pequena demais para esta altura e sobreposicao: "
+                "diminua a altura ou a sobreposicao lateral, ou aumente a area"
+            ) from err
     elif req.mode == "corridor":
         mission = plan_corridor(_lines(geom, 2), drone, camera, params, p.lines, terrain, p.takeoff)
     elif req.mode == "orbit":
@@ -164,13 +173,23 @@ def build_mission(req: PlanRequest, elevation: Elevation) -> Mission:
         )  # fmt: skip
     else:
         mission = _waypoint_mission(drone, geom, p, terrain)
-    atom2.mission_files(mission)  # surface validation errors while planning
+    # surface the writer's validation errors while planning, not only on export
+    if drone.export_format == "dji":
+        dji.mission_kmz(mission)
+    else:
+        atom2.mission_files(mission)
     return mission
 
 
 def _plan_or_raise(req: PlanRequest, elevation: Elevation) -> Mission:
     try:
         return build_mission(req, elevation)
+    except urllib.error.HTTPError as err:
+        if err.code == 429:
+            raise HTTPException(
+                502, "o servico de elevacao limitou as consultas: aguarde um minuto e tente de novo"
+            ) from err
+        raise HTTPException(502, f"falha ao consultar a elevacao: {err}") from err
     except OSError as err:
         raise HTTPException(502, f"falha ao consultar a elevacao: {err}") from err
 
@@ -214,7 +233,7 @@ def plan(
     req: PlanRequest, elevation: Annotated[Elevation, Depends(get_elevation)]
 ) -> dict[str, Any]:
     mission = _plan_or_raise(req, elevation)
-    s = estimate(mission)
+    s = estimate(mission, mission.drone.shoot_intervals_s)
     return {
         "geojson": _preview(mission),
         "stats": {
@@ -231,21 +250,38 @@ def plan(
     }
 
 
+def _download(data: bytes, media_type: str, filename: str) -> Response:
+    return Response(
+        data,
+        media_type=media_type,
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+def _dji_download(mission: Mission, stamp: int) -> Response:
+    files = dji.mission_kmz(mission)
+    if len(files) == 1:
+        return _download(files[0], "application/vnd.google-earth.kmz", f"maps4drone-{stamp}.kmz")
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_STORED) as z:
+        for n, data in enumerate(files, 1):
+            z.writestr(f"maps4drone-{stamp}_voo{n}de{len(files)}.kmz", data)
+    return _download(buf.getvalue(), "application/zip", f"maps4drone-{stamp}-voos.zip")
+
+
 @app.post("/api/export")
 def export(req: PlanRequest, elevation: Annotated[Elevation, Depends(get_elevation)]) -> Response:
     mission = _plan_or_raise(req, elevation)
-    global_json, body = atom2.mission_files(mission)
     mission_id = int(time.time() * 1000)
+    if mission.drone.export_format == "dji":
+        return _dji_download(mission, mission_id)
+    global_json, body = atom2.mission_files(mission)
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
         z.writestr("global.json", global_json)
         z.writestr(f"{mission_id}.json", body)
         z.writestr("README.txt", EXPORT_README)
-    return Response(
-        buf.getvalue(),
-        media_type="application/zip",
-        headers={"Content-Disposition": f'attachment; filename="maps4drone-{mission_id}.zip"'},
-    )
+    return _download(buf.getvalue(), "application/zip", f"maps4drone-{mission_id}.zip")
 
 
 @app.post("/api/import")
@@ -271,7 +307,26 @@ async def import_file(request: Request, name: str) -> dict[str, Any]:
     return result
 
 
-app.mount("/", StaticFiles(directory=STATIC, html=True), name="static")
+NOT_BUILT = """<!doctype html><meta charset="utf-8"><title>maps4drone</title>
+<body style="font-family:system-ui;max-width:40rem;margin:4rem auto;padding:0 1rem">
+<h1>Interface ainda n&atilde;o compilada</h1>
+<p>A API est&aacute; no ar (<a href="/docs">/docs</a>), mas falta o build da interface:</p>
+<pre>cd web &amp;&amp; npm ci &amp;&amp; npm run build</pre>
+<p>Para desenvolver, rode <code>npm run dev</code> em <code>web/</code>.</p>"""
+
+
+def mount_ui(target: FastAPI, directory: Path = STATIC) -> None:
+    """Serve the compiled React app, or a pointer to how to build it."""
+    if (directory / "index.html").is_file():
+        target.mount("/", StaticFiles(directory=directory, html=True), name="ui")
+    else:
+
+        @target.get("/", include_in_schema=False)
+        def not_built() -> HTMLResponse:
+            return HTMLResponse(NOT_BUILT)
+
+
+mount_ui(app)
 
 
 def main() -> None:

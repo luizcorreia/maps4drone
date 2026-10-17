@@ -187,7 +187,7 @@ export function FitToTask() {
         [south, west],
         [north, east],
       ],
-      { maxZoom: 19 },
+      { maxZoom: 21 },
     );
   }, [extent, map]);
   return null;

@@ -37,7 +37,8 @@ def raster_elevation(path: str, band: int = 1) -> Elevation:
             )
             raise ValueError(
                 f"o modelo de elevacao nao cobre {len(missing)} ponto(s) da rota "
-                f"(por exemplo lat, lng {shown}): ajuste a area ou escolha outro modelo"
+                f"(por exemplo lat, lng {shown}): o modelo so cobre a regiao fotografada, "
+                "com bordas sem dado; mantenha a area e a decolagem dentro dela"
             )
         return [float(v) for v in values]
 

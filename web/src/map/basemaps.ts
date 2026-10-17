@@ -3,6 +3,8 @@ export interface TileSource {
   attribution: string;
   maxZoom: number;
   maxNativeZoom?: number;
+  /** [[south, west], [north, east]]: no tiles are asked for outside it. */
+  bounds?: [[number, number], [number, number]];
 }
 
 export interface Basemap {
@@ -41,10 +43,26 @@ export const BASEMAPS: readonly Basemap[] = [
 ];
 
 /** The orthophoto of the WebODM task (tiles are served by WebODM, same origin as the page). */
-export function projectBasemap(tiles: string): Basemap {
+export function projectBasemap(
+  tiles: string,
+  extent: [number, number, number, number] | null,
+): Basemap {
   return {
     id: "project",
     label: "Ortofoto",
-    layers: [{ url: tiles, attribution: "WebODM", maxZoom: 22, maxNativeZoom: 21 }],
+    layers: [
+      {
+        url: tiles,
+        attribution: "WebODM",
+        maxZoom: 22,
+        maxNativeZoom: 21,
+        ...(extent && {
+          bounds: [
+            [extent[1], extent[0]],
+            [extent[3], extent[2]],
+          ] as [[number, number], [number, number]],
+        }),
+      },
+    ],
   };
 }

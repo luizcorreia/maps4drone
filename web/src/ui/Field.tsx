@@ -1,4 +1,4 @@
-import { useId } from "react";
+import { useId, useState } from "react";
 
 interface FieldProps {
   label: string;
@@ -14,9 +14,18 @@ interface FieldProps {
 /** A slider with an editable number next to it, so both rough and exact input are easy. */
 export function Field({ label, value, onChange, min, max, step = 1, unit, hint }: FieldProps) {
   const id = useId();
-  const commit = (raw: string) => {
+  // What is being typed, which can be a half-typed value below the minimum ("3" on the way to "30")
+  const [draft, setDraft] = useState<string | null>(null);
+  const clamp = (n: number) => Math.min(max, Math.max(min, n));
+  const type = (raw: string) => {
+    setDraft(raw);
     const n = Number(raw);
-    if (raw !== "" && Number.isFinite(n)) onChange(Math.min(max, Math.max(min, n)));
+    if (raw !== "" && Number.isFinite(n) && n >= min && n <= max) onChange(n);
+  };
+  const settle = () => {
+    const n = Number(draft);
+    if (draft !== null && draft !== "" && Number.isFinite(n)) onChange(clamp(n));
+    setDraft(null);
   };
   return (
     <div className="field">
@@ -30,7 +39,8 @@ export function Field({ label, value, onChange, min, max, step = 1, unit, hint }
           step={step}
           value={value}
           onChange={(e) => {
-            commit(e.target.value);
+            setDraft(null);
+            onChange(clamp(Number(e.target.value)));
           }}
         />
         <span className="field-number">
@@ -40,9 +50,13 @@ export function Field({ label, value, onChange, min, max, step = 1, unit, hint }
             min={min}
             max={max}
             step={step}
-            value={value}
+            value={draft ?? value}
             onChange={(e) => {
-              commit(e.target.value);
+              type(e.target.value);
+            }}
+            onBlur={settle}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") settle();
             }}
           />
           {unit && <span className="unit">{unit}</span>}

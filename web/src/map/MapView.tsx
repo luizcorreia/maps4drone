@@ -52,7 +52,8 @@ function useHint(): Hint | null {
 export function MapView() {
   const task = useStore((s) => s.task);
   const basemaps = useMemo(
-    () => (task?.assets.orthophoto ? [projectBasemap(task.tiles), ...BASEMAPS] : BASEMAPS),
+    () =>
+      task?.assets.orthophoto ? [projectBasemap(task.tiles, task.extent), ...BASEMAPS] : BASEMAPS,
     [task],
   );
   const [chosen, setBasemapId] = useState<string | null>(null); // null: the default

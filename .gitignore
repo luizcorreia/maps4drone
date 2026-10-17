@@ -9,3 +9,6 @@ CLAUDE.md
 AGENTS.md
 context-log.md
 gotchas.md
+node_modules/
+src/maps4drone/web/static/
+*.tsbuildinfo

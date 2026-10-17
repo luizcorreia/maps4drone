@@ -39,8 +39,8 @@ uv venv && uv pip install -e ".[dev]"
 ## Interfaces
 
 - **CLI** (abaixo).
-- **Web:** `uv pip install -e ".[web]" && maps4drone-web` abre um editor com mapa, abas e
-  estatísticas, parecido com a referência. Veja [docs/web.md](docs/web.md).
+- **Web:** interface React em passos (missão, área, ajustes, revisão) com mapa, dados do voo
+  e perfil de elevação, para o Atom 2 e drones DJI. Veja [docs/web.md](docs/web.md).
 - **Plugin QGIS:** algoritmos de Processing que geram camadas e a pasta da missão. Veja
   [docs/qgis.md](docs/qgis.md). Build: `python scripts/build_qgis_plugin.py`.
 
@@ -52,6 +52,7 @@ maps4drone drones
 
 # grid sobre um polígono, linhas a 35°, 100 m, disparo a cada 3 s
 maps4drone grid area.kml --angle 35 --altitude 100 --interval 3 --out out/
+# sem --angle, as faixas seguem o eixo maior da área (retângulo mínimo rotacionado)
 
 # seguindo o relevo (ponto de decolagem obrigatório)
 maps4drone grid area.geojson --terrain --takeoff=-23.15,-51.90 --out out/
@@ -94,8 +95,9 @@ por qualquer interface.
 
 ## O que ainda não foi validado em voo
 
-- O plugin QGIS foi testado em QGIS 4.2 sem interface gráfica; a interface web teve só a
-  página carregada e a API exercitada (cliques no mapa não foram automatizados).
+- O plugin QGIS foi testado em QGIS 4.2 sem interface gráfica; a interface web foi exercitada
+  em um navegador automatizado (desenhar a área, planejar, revisar), mas não em celular, e o
+  export DJI nunca foi aberto no DJI Fly.
 - O formato do Atom 2 foi reconstruído de um arquivo real exportado do app e de
   engenharia reversa da comunidade; ele pode mudar com o firmware.
 - Convenções de `yaw` (graus, referência norte) usadas em `orbit` e `facade` e a altura
@@ -108,6 +110,8 @@ Relatos de voo (com a versão do app e do firmware) são muito bem-vindos nas is
 ## Créditos
 
 - Funcionalidades inspiradas no gerador web da Maps4me.
+- A interface web usa o GeoWay 1.2 como referência de recursos e de parâmetros dos drones DJI;
+  o código foi reescrito do zero em React.
 - [GeoFlight Planner](https://github.com/OpenGeoOne/qgis_drone_flight_planner) (MIT,
   GeoOne): referência de algoritmos de voo para QGIS.
 - Formato de missão do Atom 2: engenharia reversa publicada por

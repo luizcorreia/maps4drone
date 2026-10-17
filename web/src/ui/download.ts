@@ -1,0 +1,12 @@
+import type { MissionFile } from "../api/types";
+
+export function downloadFile({ blob, filename }: MissionFile): void {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  link.click();
+  setTimeout(() => {
+    URL.revokeObjectURL(url);
+  }, 2000);
+}

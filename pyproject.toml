@@ -21,6 +21,8 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/maps4drone"]
+# the compiled web UI is git-ignored, but belongs in the wheel
+artifacts = ["src/maps4drone/web/static"]
 
 [tool.ruff]
 line-length = 100

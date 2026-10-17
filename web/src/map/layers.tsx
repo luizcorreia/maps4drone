@@ -175,6 +175,24 @@ export function FitOnImport() {
   return null;
 }
 
+/** Frames the task's extent as soon as the task is known, so the map opens on the project. */
+export function FitToTask() {
+  const map = useMap();
+  const extent = useStore((s) => s.task?.extent);
+  useEffect(() => {
+    if (!extent) return;
+    const [west, south, east, north] = extent;
+    map.fitBounds(
+      [
+        [south, west],
+        [north, east],
+      ],
+      { maxZoom: 19 },
+    );
+  }, [extent, map]);
+  return null;
+}
+
 const LOCATE_TIMEOUT_MS = 5000;
 const LOCATE_ZOOM = 16;
 
@@ -185,7 +203,8 @@ export function LocateOnStart() {
     if (!("geolocation" in navigator)) return;
     navigator.geolocation.getCurrentPosition(
       ({ coords }) => {
-        if (useStore.getState().points.length === 0) {
+        const { points, task } = useStore.getState();
+        if (points.length === 0 && !task) {
           map.setView([coords.latitude, coords.longitude], LOCATE_ZOOM);
         }
       },

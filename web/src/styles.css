@@ -97,7 +97,7 @@ body {
   left: 50%;
   transform: translateX(-50%);
   z-index: 1000;
-  max-width: calc(100% - 24px);
+  max-width: min(520px, 42%);
   padding: 8px 14px;
   border: 1px solid var(--border);
   border-radius: var(--radius);
@@ -725,6 +725,11 @@ button.link {
 }
 
 @media (max-width: 800px) {
+  .map-hint {
+    top: 54px;
+    max-width: calc(100% - 24px);
+  }
+
   .map-cards {
     max-width: calc(100% - 24px);
   }
@@ -732,4 +737,13 @@ button.link {
   .profile-chart svg {
     height: 90px;
   }
+}
+
+.task-chip {
+  margin-left: auto;
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-2);
+  font-size: 0.8125rem;
 }

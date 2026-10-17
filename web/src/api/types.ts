@@ -59,10 +59,27 @@ export type Geometry =
   | { type: "LineString"; coordinates: LngLat[] }
   | { type: "Polygon"; coordinates: LngLat[][] };
 
+/** Where terrain heights come from when a WebODM task is open: its own models, or online. */
+export type DemSource = "dsm" | "dtm" | "online";
+
 export interface PlanRequest {
   mode: Mode;
   geometry: Geometry | null;
   params: Params;
+  /** Only sent inside WebODM, for terrain following with a project's DSM or DTM. */
+  dem?: { layer: "dsm" | "dtm" };
+}
+
+/** The WebODM task the page was opened for (?task=<id>). */
+export interface TaskContext {
+  id: string;
+  project: number | string;
+  name: string;
+  /** [west, south, east, north] */
+  extent: [number, number, number, number] | null;
+  assets: { orthophoto: boolean; dsm: boolean; dtm: boolean };
+  /** Leaflet tile URL template of the task's orthophoto. */
+  tiles: string;
 }
 
 export interface PlanStats {

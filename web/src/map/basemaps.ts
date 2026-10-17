@@ -6,7 +6,7 @@ export interface TileSource {
 }
 
 export interface Basemap {
-  id: "street" | "satellite" | "hybrid";
+  id: "street" | "satellite" | "hybrid" | "project";
   label: string;
   /** Drawn in order, so labels go last. */
   layers: TileSource[];
@@ -39,3 +39,12 @@ export const BASEMAPS: readonly Basemap[] = [
   { id: "satellite", label: "Satélite", layers: [SATELLITE] },
   { id: "hybrid", label: "Híbrido", layers: [SATELLITE, LABELS] },
 ];
+
+/** The orthophoto of the WebODM task (tiles are served by WebODM, same origin as the page). */
+export function projectBasemap(tiles: string): Basemap {
+  return {
+    id: "project",
+    label: "Ortofoto",
+    layers: [{ url: tiles, attribution: "WebODM", maxZoom: 22, maxNativeZoom: 21 }],
+  };
+}

@@ -1,6 +1,6 @@
 import "leaflet/dist/leaflet.css";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { MapContainer, TileLayer } from "react-leaflet";
 
 import { modeInfo } from "../api/geometry";
@@ -8,11 +8,12 @@ import { ElevationProfile } from "../flight/ElevationProfile";
 import { InfoCard } from "../flight/InfoCard";
 import { Legend } from "../flight/Legend";
 import { useStore } from "../store";
-import { BASEMAPS, type Basemap } from "./basemaps";
+import { BASEMAPS, projectBasemap } from "./basemaps";
 import {
   DrawnShape,
   FitOnImport,
   FitToPlan,
+  FitToTask,
   LocateOnStart,
   MapClicks,
   PlannedRoute,
@@ -49,7 +50,13 @@ function useHint(): Hint | null {
 }
 
 export function MapView() {
-  const [basemap, setBasemap] = useState<Basemap>(BASEMAPS[0] as Basemap);
+  const task = useStore((s) => s.task);
+  const basemaps = useMemo(
+    () => (task?.assets.orthophoto ? [projectBasemap(task.tiles), ...BASEMAPS] : BASEMAPS),
+    [task],
+  );
+  const [chosen, setBasemapId] = useState<string | null>(null); // null: the default
+  const basemap = basemaps.find((b) => b.id === chosen) ?? basemaps[0];
   const picking = useStore((s) => s.pickingTakeoff);
   const hint = useHint();
 
@@ -63,26 +70,27 @@ export function MapView() {
         preferCanvas
         className="map"
       >
-        {basemap.layers.map((layer) => (
+        {basemap?.layers.map((layer) => (
           <TileLayer key={layer.url} {...layer} />
         ))}
         <MapClicks />
         <DrawnShape />
         <PlannedRoute />
         <TakeoffMarker />
+        <FitToTask />
         <FitToPlan />
         <FitOnImport />
         <LocateOnStart />
       </MapContainer>
 
       <div className="basemaps" role="group" aria-label="Mapa de fundo">
-        {BASEMAPS.map((b) => (
+        {basemaps.map((b) => (
           <button
             key={b.id}
             type="button"
-            aria-pressed={b.id === basemap.id}
+            aria-pressed={b.id === basemap?.id}
             onClick={() => {
-              setBasemap(b);
+              setBasemapId(b.id);
             }}
           >
             {b.label}

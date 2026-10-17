@@ -18,6 +18,7 @@ beforeEach(() => {
     pickingTakeoff: false,
     status: "idle",
     error: null,
+    task: null,
   });
 });
 
@@ -66,6 +67,29 @@ describe("MapView", () => {
     });
     const { container } = render(<MapView />);
     expect(container.querySelectorAll(".pin-draw")).toHaveLength(2);
+  });
+
+  it("opens on the project's orthophoto when a task has one", () => {
+    useStore.setState({
+      task: {
+        id: "t",
+        project: 1,
+        name: "Fazenda",
+        extent: null,
+        assets: { orthophoto: true, dsm: true, dtm: false },
+        tiles: "/api/projects/1/tasks/t/orthophoto/tiles/{z}/{x}/{y}.png",
+      },
+    });
+    render(<MapView />);
+    expect(screen.getByRole("button", { name: "Ortofoto" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    act(() => {
+      useStore.setState({ task: null });
+    });
+    expect(screen.queryByRole("button", { name: "Ortofoto" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Mapa" })).toHaveAttribute("aria-pressed", "true");
   });
 
   it("switches the basemap", async () => {

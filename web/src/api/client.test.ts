@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { ApiError, exportMission, fetchDrones, importFile, planMission } from "./client";
+import { ApiError, exportMission, fetchDrones, fetchTask, importFile, planMission } from "./client";
 import { toGeometry } from "./geometry";
 import { DEFAULT_PARAMS } from "../store";
 
@@ -83,5 +83,63 @@ describe("requests", () => {
     const fetchMock = stubFetch(reply(JSON.stringify({ polygon: null, line: null })));
     await importFile(new File(["x"], "área 1.kml"));
     expect((fetchMock.mock.calls[0] as [string])[0]).toBe("/api/import?name=%C3%A1rea%201.kml");
+  });
+});
+
+describe("inside WebODM", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    document.cookie = "csrftoken=; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+  });
+
+  it("talks to the plugin's API when the build says so", async () => {
+    vi.stubEnv("VITE_API_BASE", "/api/plugins/maps4drone");
+    const fetchMock = stubFetch(reply(JSON.stringify([])));
+    await fetchDrones();
+    expect((fetchMock.mock.calls[0] as [string])[0]).toBe("/api/plugins/maps4drone/drones");
+  });
+
+  it("plans and exports against a task, so its DSM can be used", async () => {
+    vi.stubEnv("VITE_API_BASE", "/api/plugins/maps4drone");
+    const fetchMock = vi
+      .fn()
+      .mockImplementation(() => Promise.resolve(reply(JSON.stringify({ stats: {} }))));
+    vi.stubGlobal("fetch", fetchMock);
+    await planMission(request, { taskId: "abc-123" });
+    await exportMission(request, { taskId: "abc-123" });
+    const paths = fetchMock.mock.calls.map((c) => (c as [string])[0]);
+    expect(paths).toEqual([
+      "/api/plugins/maps4drone/task/abc-123/plan",
+      "/api/plugins/maps4drone/task/abc-123/export",
+    ]);
+  });
+
+  it("loads the task the page was opened for", async () => {
+    const task = { id: "t", name: "Fazenda", assets: { dsm: true } };
+    const fetchMock = stubFetch(reply(JSON.stringify(task)));
+    expect(await fetchTask("t")).toEqual(task);
+    expect((fetchMock.mock.calls[0] as [string])[0]).toBe("/api/task/t/info");
+  });
+
+  it("sends Django's CSRF token on writes", async () => {
+    document.cookie = "csrftoken=s3cr3t%20token";
+    const fetchMock = stubFetch(reply(JSON.stringify({ stats: {} })));
+    await planMission(request);
+    const headers = (fetchMock.mock.calls[0] as [string, RequestInit])[1].headers as Record<
+      string,
+      string
+    >;
+    expect(headers["X-CSRFToken"]).toBe("s3cr3t token");
+    expect(headers["Content-Type"]).toBe("application/json");
+  });
+
+  it("sends no CSRF header when there is no cookie", async () => {
+    const fetchMock = stubFetch(reply(JSON.stringify({ stats: {} })));
+    await planMission(request);
+    const headers = (fetchMock.mock.calls[0] as [string, RequestInit])[1].headers as Record<
+      string,
+      string
+    >;
+    expect(headers).not.toHaveProperty("X-CSRFToken");
   });
 });

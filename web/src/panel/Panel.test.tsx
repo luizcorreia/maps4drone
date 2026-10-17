@@ -64,6 +64,8 @@ beforeEach(() => {
     status: "idle",
     error: null,
     pickingTakeoff: false,
+    task: null,
+    demSource: "online",
   });
 });
 
@@ -144,6 +146,36 @@ describe("Panel", () => {
     await userEvent.click(screen.getByLabelText("Acompanhar o terreno"));
     await userEvent.click(screen.getByRole("button", { name: "Marcar decolagem no mapa" }));
     expect(useStore.getState().pickingTakeoff).toBe(true);
+  });
+
+  it("offers the project's models for terrain following inside a task", async () => {
+    useStore.setState({
+      points: SQUARE,
+      params: { ...DEFAULT_PARAMS, terrain: true },
+      demSource: "dsm",
+      task: {
+        id: "t",
+        project: 1,
+        name: "Fazenda",
+        extent: null,
+        assets: { orthophoto: true, dsm: true, dtm: false },
+        tiles: "",
+      },
+    });
+    render(<Panel />);
+    await userEvent.click(step("Ajustes"));
+    const select = screen.getByLabelText("Modelo de elevação");
+    expect(select).toHaveValue("dsm");
+    expect(screen.getByRole("option", { name: /DTM do projeto.*indisponível/ })).toBeDisabled();
+    await userEvent.selectOptions(select, "online");
+    expect(useStore.getState().demSource).toBe("online");
+  });
+
+  it("does not mention a model choice outside WebODM", async () => {
+    useStore.setState({ points: SQUARE, params: { ...DEFAULT_PARAMS, terrain: true }, task: null });
+    render(<Panel />);
+    await userEvent.click(step("Ajustes"));
+    expect(screen.queryByLabelText("Modelo de elevação")).not.toBeInTheDocument();
   });
 
   it("summarises the plan and exports it", async () => {

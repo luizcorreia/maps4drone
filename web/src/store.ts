@@ -1,9 +1,10 @@
 import { create } from "zustand";
 
-import { exportMission, fetchDrones, planMission } from "./api/client";
+import { exportMission, fetchDrones, fetchTask, planMission } from "./api/client";
 import { modeInfo, toGeometry } from "./api/geometry";
 import type {
   Camera,
+  DemSource,
   Drone,
   LngLat,
   MissionFile,
@@ -11,6 +12,7 @@ import type {
   Params,
   PlanRequest,
   PlanResult,
+  TaskContext,
 } from "./api/types";
 
 export type Status = "idle" | "planning" | "ready" | "error";
@@ -56,8 +58,13 @@ interface State {
   pickingTakeoff: boolean;
   /** Bumped when points arrive from outside the map, so the map re-frames them. */
   fitSignal: number;
+  /** The WebODM task the page was opened for, if any. */
+  task: TaskContext | null;
+  demSource: DemSource;
 
   loadDrones: () => Promise<void>;
+  loadTask: (id: string) => Promise<void>;
+  setDemSource: (source: DemSource) => void;
   setMode: (mode: Mode) => void;
   setDrone: (id: string) => void;
   setParam: <K extends keyof Params>(key: K, value: Params[K]) => void;
@@ -82,11 +89,23 @@ export const selectCamera = (s: Pick<State, "drones" | "params">): Camera | unde
 };
 
 /** The request for what is on the map, or null while the plan cannot be computed yet. */
-export function selectRequest(s: Pick<State, "mode" | "points" | "params">): PlanRequest | null {
+export function selectRequest(
+  s: Pick<State, "mode" | "points" | "params"> & Partial<Pick<State, "task" | "demSource">>,
+): PlanRequest | null {
   const geometry = toGeometry(s.mode, s.points);
   if (!geometry) return null;
   if (s.params.terrain && !s.params.takeoff) return null;
-  return { mode: s.mode, geometry, params: s.params };
+  const request: PlanRequest = { mode: s.mode, geometry, params: s.params };
+  if (s.task && s.params.terrain && s.demSource && s.demSource !== "online") {
+    request.dem = { layer: s.demSource };
+  }
+  return request;
+}
+
+/** The project's own model if it has one: it is sharper than the online one and has no quota. */
+function defaultDemSource(task: TaskContext): DemSource {
+  if (task.assets.dsm) return "dsm";
+  return task.assets.dtm ? "dtm" : "online";
 }
 
 /** Drone-dependent params that stay valid after a drone switch. */
@@ -123,7 +142,7 @@ export const useStore = create<State>()((set, get) => {
       () => {
         const controller = new AbortController();
         inflight = controller;
-        planMission(request, controller.signal).then(
+        planMission(request, { taskId: get().task?.id, signal: controller.signal }).then(
           (plan) => {
             if (controller.signal.aborted) return;
             set({ plan, status: "ready", error: null });
@@ -157,6 +176,8 @@ export const useStore = create<State>()((set, get) => {
     error: null,
     pickingTakeoff: false,
     fitSignal: 0,
+    task: null,
+    demSource: "online",
 
     loadDrones: async () => {
       let drones: Drone[];
@@ -169,6 +190,21 @@ export const useStore = create<State>()((set, get) => {
       const current = drones.find((d) => d.id === get().params.drone) ?? drones[0];
       set({ drones });
       if (current) edit({ params: paramsForDrone(get().params, current) });
+    },
+
+    loadTask: async (id) => {
+      try {
+        const task = await fetchTask(id);
+        set({ task, demSource: defaultDemSource(task) });
+        replan();
+      } catch (err) {
+        set({ status: "error", error: err instanceof Error ? err.message : String(err) });
+      }
+    },
+
+    setDemSource: (demSource) => {
+      set({ demSource });
+      replan();
     },
 
     setMode: (mode) => {
@@ -234,7 +270,7 @@ export const useStore = create<State>()((set, get) => {
     exportMission: async () => {
       const request = selectRequest(get());
       if (!request) throw new Error("Nada para exportar: desenhe a área e confira os ajustes.");
-      return exportMission(request);
+      return exportMission(request, { taskId: get().task?.id });
     },
   };
 });

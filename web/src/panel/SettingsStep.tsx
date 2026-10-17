@@ -11,7 +11,44 @@ type NumericParam = {
 const SURVEY_MODES: readonly Mode[] = ["grid", "double_grid", "corridor"];
 const TERRAIN_MODES: readonly Mode[] = ["waypoints", ...SURVEY_MODES];
 
+const DEM_LABELS = {
+  dsm: "DSM do projeto (inclui árvores e prédios)",
+  dtm: "DTM do projeto (só o chão)",
+  online: "Online (Open-Meteo, 90 m)",
+} as const;
+
+function DemChoice() {
+  const task = useStore((s) => s.task);
+  const source = useStore((s) => s.demSource);
+  const setSource = useStore((s) => s.setDemSource);
+  if (!task) return null;
+  const available = (key: keyof typeof DEM_LABELS) => key === "online" || task.assets[key];
+  return (
+    <div className="field">
+      <label htmlFor="dem-source">Modelo de elevação</label>
+      <select
+        id="dem-source"
+        value={source}
+        onChange={(e) => {
+          setSource(e.target.value as keyof typeof DEM_LABELS);
+        }}
+      >
+        {(Object.keys(DEM_LABELS) as (keyof typeof DEM_LABELS)[]).map((key) => (
+          <option key={key} value={key} disabled={!available(key)}>
+            {DEM_LABELS[key]}
+            {available(key) ? "" : " (indisponível)"}
+          </option>
+        ))}
+      </select>
+      <p className="field-hint">
+        O DSM é o mais seguro para voar: a altura já passa por cima de árvores e construções.
+      </p>
+    </div>
+  );
+}
+
 function Terrain() {
+  const task = useStore((s) => s.task);
   const terrain = useStore((s) => s.params.terrain);
   const takeoff = useStore((s) => s.params.takeoff);
   const picking = useStore((s) => s.pickingTakeoff);
@@ -25,8 +62,13 @@ function Terrain() {
         onChange={(v) => {
           setParam("terrain", v);
         }}
-        hint="A altura varia para manter a mesma distância do chão. Usa a elevação online (Open-Meteo)."
+        hint={
+          task
+            ? "A altura varia para manter a mesma distância do terreno do projeto."
+            : "A altura varia para manter a mesma distância do chão. Usa a elevação online (Open-Meteo)."
+        }
       />
+      {terrain && <DemChoice />}
       {terrain && (
         <div className="field">
           <button

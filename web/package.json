@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "build:webodm": "tsc -b && vite build --mode webodm",
     "preview": "vite preview",
     "typecheck": "tsc -b",
     "lint": "eslint .",

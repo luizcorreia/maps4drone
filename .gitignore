@@ -10,5 +10,6 @@ AGENTS.md
 context-log.md
 gotchas.md
 node_modules/
+web/dist-webodm/
 src/maps4drone/web/static/
 *.tsbuildinfo

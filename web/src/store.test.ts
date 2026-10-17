@@ -47,6 +47,8 @@ beforeEach(() => {
     plan: null,
     status: "idle",
     error: null,
+    task: null,
+    demSource: "online",
   });
 });
 
@@ -183,6 +185,76 @@ describe("drone switch", () => {
     useStore.getState().setDrone("other");
     useStore.getState().setDrone("atom2");
     expect(useStore.getState().params.interval).toBe(3);
+  });
+});
+
+const TASK = {
+  id: "t1",
+  project: 3,
+  name: "Fazenda",
+  extent: [-51.9, -23.1, -51.8, -23.0] as [number, number, number, number],
+  assets: { orthophoto: true, dsm: true, dtm: false },
+  tiles: "/api/projects/3/tasks/t1/orthophoto/tiles/{z}/{x}/{y}.png",
+};
+
+describe("WebODM task", () => {
+  it("loads the task and prefers its DSM, then its DTM, then the online model", async () => {
+    vi.mocked(client.fetchTask).mockResolvedValue(TASK);
+    await useStore.getState().loadTask("t1");
+    expect(useStore.getState()).toMatchObject({ task: TASK, demSource: "dsm" });
+    vi.mocked(client.fetchTask).mockResolvedValue({
+      ...TASK,
+      assets: { ...TASK.assets, dsm: false, dtm: true },
+    });
+    await useStore.getState().loadTask("t1");
+    expect(useStore.getState().demSource).toBe("dtm");
+    vi.mocked(client.fetchTask).mockResolvedValue({
+      ...TASK,
+      assets: { ...TASK.assets, dsm: false },
+    });
+    await useStore.getState().loadTask("t1");
+    expect(useStore.getState().demSource).toBe("online");
+  });
+
+  it("reports a task that cannot be opened", async () => {
+    vi.mocked(client.fetchTask).mockRejectedValue(new Error("Sem permissão"));
+    await useStore.getState().loadTask("nope");
+    expect(useStore.getState()).toMatchObject({
+      status: "error",
+      error: "Sem permissão",
+      task: null,
+    });
+  });
+
+  it("asks for the model only when following terrain inside a task", () => {
+    const base = { mode: "grid" as const, points: SQUARE, task: TASK, demSource: "dsm" as const };
+    const flat = selectRequest({ ...base, params: DEFAULT_PARAMS });
+    expect(flat?.dem).toBeUndefined();
+    const params = {
+      ...DEFAULT_PARAMS,
+      terrain: true,
+      takeoff: [-51.9, -23.15] as [number, number],
+    };
+    expect(selectRequest({ ...base, params })?.dem).toEqual({ layer: "dsm" });
+    expect(selectRequest({ ...base, params, demSource: "online" })?.dem).toBeUndefined();
+    expect(selectRequest({ ...base, params, task: null })?.dem).toBeUndefined();
+  });
+
+  it("plans against the task and replans when the model changes", async () => {
+    vi.mocked(client.fetchTask).mockResolvedValue(TASK);
+    await useStore.getState().loadTask("t1");
+    useStore.setState({ points: SQUARE });
+    useStore.getState().setParam("takeoff", [-51.9, -23.15]);
+    useStore.getState().setParam("terrain", true);
+    await vi.advanceTimersByTimeAsync(1100);
+    expect(client.planMission).toHaveBeenCalledTimes(1);
+    const [request, options] = vi.mocked(client.planMission).mock.calls[0] ?? [];
+    expect(request?.dem).toEqual({ layer: "dsm" });
+    expect(options?.taskId).toBe("t1");
+    useStore.getState().setDemSource("online");
+    await vi.advanceTimersByTimeAsync(1100);
+    expect(client.planMission).toHaveBeenCalledTimes(2);
+    expect(vi.mocked(client.planMission).mock.calls[1]?.[0].dem).toBeUndefined();
   });
 });
 

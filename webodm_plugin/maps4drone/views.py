@@ -4,7 +4,7 @@ import uuid
 from datetime import datetime, timezone
 
 from app.api.common import get_and_check_project
-from app.models import Task
+from app.models import PluginDatum, Task
 from app.plugins import GlobalDataStore
 from app.plugins.views import TaskView
 from django.http import HttpResponse
@@ -108,8 +108,28 @@ class TaskInfo(TaskView):
 PLUGIN = "maps4drone"
 
 
+class _PlanStore:
+    """GlobalDataStore plus the two things the plans need that it lacks: list by prefix, delete."""
+
+    def __init__(self):
+        self._store = GlobalDataStore(PLUGIN)
+
+    def get_json(self, key, default=None):
+        return self._store.get_json(key, default)
+
+    def set_json(self, key, value):
+        return self._store.set_json(key, value)
+
+    def del_key(self, key):
+        return self._store.del_key(key)
+
+    def items(self, prefix):
+        rows = PluginDatum.objects.filter(user=None, key__startswith=self._store.db_key(prefix))
+        return list(rows.values_list("json_value", flat=True))
+
+
 def _store():
-    return GlobalDataStore(PLUGIN)
+    return _PlanStore()
 
 
 def _now():
@@ -162,10 +182,15 @@ class ProjectPlanTask(APIView):
     def post(self, request, pk=None, plan_id=None):
         project = get_and_check_project(request, pk, perms=("change_project",))
         task_id = request.data.get("task") if hasattr(request.data, "get") else None
-        if task_id and not Task.objects.filter(pk=task_id, project=project).exists():
-            return _error(
-                "a tarefa nao pertence a este projeto", status.HTTP_422_UNPROCESSABLE_ENTITY
-            )
+        if task_id:
+            try:
+                task_id = str(uuid.UUID(str(task_id)))  # Task.pk is a UUID: anything else is a 422
+            except ValueError:
+                return _error("tarefa invalida", status.HTTP_422_UNPROCESSABLE_ENTITY)
+            if not Task.objects.filter(pk=task_id, project=project).exists():
+                return _error(
+                    "a tarefa nao pertence a este projeto", status.HTTP_422_UNPROCESSABLE_ENTITY
+                )
         return _answer(
             lambda: logic.link_plan(
                 _store(), project.id, plan_id, task_id or None, _now(), request.user.username

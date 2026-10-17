@@ -28,6 +28,10 @@ export const MODES: readonly ModeInfo[] = [
   { id: "waypoints", shape: "path", label: "Waypoints", min: 2, max: Infinity },
 ];
 
+/** Only the survey-style modes can follow the terrain; the server refuses it for the others. */
+export const supportsTerrain = (mode: Mode): boolean =>
+  mode === "waypoints" || mode === "grid" || mode === "double_grid" || mode === "corridor";
+
 export function modeInfo(mode: Mode): ModeInfo {
   const info = MODES.find((m) => m.id === mode);
   if (!info) throw new Error(`unknown mode ${mode}`);

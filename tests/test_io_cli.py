@@ -117,3 +117,24 @@ def test_cli_orbit_facade_drones(tmp_path, capsys):
         )
         == 0
     )
+
+
+def test_cli_writes_a_dji_kmz_for_a_dji_drone(tmp_path, capsys):
+    import zipfile
+
+    kml = tmp_path / "a.kml"
+    kml.write_text(KML)
+    out = tmp_path / "out"
+    assert (
+        main(["grid", str(kml), "--drone", "mini4pro", "--interval", "2", "--out", str(out)]) == 0
+    )
+    kmz = list(out.glob("maps4drone-*.kmz"))
+    assert len(kmz) == 1 and not any(p.is_dir() for p in out.iterdir())  # not an Atom 2 folder
+    with zipfile.ZipFile(kmz[0]) as z:
+        assert "wpmz/waylines.wpml" in z.namelist()
+    assert (out / "preview.geojson").is_file()
+    assert (
+        main(["grid", str(kml), "--drone", "mini4pro", "--replace", str(out), "--out", str(out)])
+        == 1
+    )
+    assert "Atom 2 only" in capsys.readouterr().err

@@ -76,6 +76,11 @@ Sob `/api/plugins/maps4drone/` (exige login no WebODM):
 
 A permissão é a do próprio WebODM: quem não pode ver o projeto não planeja sobre ele.
 
+Cada plano é uma chave própria do armazenamento de plugins do WebODM (`plan:<projeto>:<id>`), então salvar,
+apagar ou vincular um plano nunca reescreve outro, mesmo com duas pessoas salvando ao mesmo tempo no
+mesmo projeto. Os ids são gerados pelo servidor (32 dígitos hexadecimais); um id de outro formato é
+tratado como "plano não encontrado".
+
 ## Como é feito
 
 - `logic.py` tem o que o plugin decide (ler o corpo, escolher o modelo, descrever a tarefa) sem

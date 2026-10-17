@@ -139,6 +139,25 @@ describe("Panel", () => {
     expect(screen.getByLabelText("Ângulo das faixas")).toBeInTheDocument();
   });
 
+  it("only accepts an odd number of corridor passes, as the planner does", async () => {
+    useStore.setState({
+      points: SQUARE,
+      mode: "corridor",
+      params: { ...DEFAULT_PARAMS, lines: 3 },
+    });
+    render(<Panel />);
+    await userEvent.click(step("Ajustes"));
+    const field = screen.getByLabelText("Passadas");
+    await userEvent.clear(field);
+    await userEvent.type(field, "4");
+    expect(useStore.getState().params.lines).toBe(5); // 4 would be refused by the planner
+    await userEvent.clear(field);
+    await userEvent.type(field, "7");
+    expect(useStore.getState().params.lines).toBe(7);
+    await userEvent.tab();
+    expect(field).toHaveValue(7);
+  });
+
   it("asks for the takeoff point when following terrain", async () => {
     useStore.setState({ points: SQUARE });
     render(<Panel />);

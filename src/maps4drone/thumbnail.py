@@ -11,15 +11,15 @@ from __future__ import annotations
 
 import io
 import math
-import urllib.request
-from collections.abc import Callable, Sequence
+from collections.abc import Sequence
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
-from typing import Optional, Union
+from typing import Union
 
 from PIL import Image, ImageDraw, ImageEnhance, ImageFont
 
 from .model import Waypoint
+from .tiles import TileFetcher, osm_tiles  # noqa: F401 - osm_tiles is re-exported
 
 WIDTH, HEIGHT = 2316, 1080
 # One unit of zoom here is two OSM zoom levels' worth of pixels per tile: the picture is drawn
@@ -32,6 +32,7 @@ MAX_PINS = 40
 MAX_TAGGED = 12
 SUPERSAMPLE = 2
 
+_ATTRIBUTION = "© OpenStreetMap contributors"
 BACKGROUND = (240, 229, 233)
 ROUTE = (0, 200, 83)
 ROUTE_EDGE = (0, 130, 60)
@@ -40,36 +41,7 @@ PIN_LAST = (0, 150, 70)
 TAG = (95, 95, 95, 235)
 
 # aliases are evaluated at import time, so no `|` here: Python 3.9 has none for types
-TileFetcher = Callable[[int, int, int], Optional[bytes]]
 Font = Union[ImageFont.FreeTypeFont, ImageFont.ImageFont]
-
-_OSM = "https://tile.openstreetmap.org/{z}/{x}/{y}.png"
-_ATTRIBUTION = "© OpenStreetMap contributors"
-_CACHE_LIMIT = 1024
-_tile_cache: dict[tuple[int, int, int], bytes] = {}
-
-
-def osm_tiles(timeout: float = 6.0) -> TileFetcher:
-    """OpenStreetMap tiles with a User-Agent, as its usage policy asks, and a small cache so a
-    mission tweaked and exported again does not hit the server again. Failures give None."""
-
-    def fetch(z: int, x: int, y: int) -> bytes | None:
-        if (cached := _tile_cache.get((z, x, y))) is not None:
-            return cached
-        request = urllib.request.Request(
-            _OSM.format(z=z, x=x, y=y), headers={"User-Agent": "maps4drone"}
-        )
-        try:
-            with urllib.request.urlopen(request, timeout=timeout) as resp:
-                data: bytes = resp.read()
-        except OSError:
-            return None
-        if len(_tile_cache) >= _CACHE_LIMIT:
-            _tile_cache.clear()
-        _tile_cache[(z, x, y)] = data
-        return data
-
-    return fetch
 
 
 @dataclass(frozen=True)
@@ -138,6 +110,14 @@ def _basemap(view: View, fetch: TileFetcher | None) -> tuple[Image.Image, bool]:
         canvas = ImageEnhance.Color(canvas).enhance(0.3)
         canvas = Image.blend(canvas, Image.new("RGB", canvas.size, BACKGROUND), 0.35)
     return canvas, drawn
+
+
+def _font(size: int) -> Font:
+    """The bundled font at `size`; Pillow before 10.1 has only the small bitmap one."""
+    try:
+        return ImageFont.load_default(size=size)
+    except TypeError:
+        return ImageFont.load_default()
 
 
 def _chevron(draw: ImageDraw.ImageDraw, x: float, y: float, angle: float, size: float) -> None:
@@ -212,8 +192,8 @@ def render_thumbnail(waypoints: Sequence[Waypoint], fetch_tile: TileFetcher | No
     pts = [view.project(w.lng, w.lat) for w in waypoints]
     _route(draw, pts)
     numbered = _sample(len(waypoints))
-    pin_font = ImageFont.load_default(size=34 * SUPERSAMPLE)
-    tag_font = ImageFont.load_default(size=24 * SUPERSAMPLE)
+    pin_font = _font(34 * SUPERSAMPLE)
+    tag_font = _font(24 * SUPERSAMPLE)
     last = len(waypoints) - 1
     for i in numbered:
         _pin(draw, pin_font, pts[i], i + 1, i == last)
@@ -228,7 +208,7 @@ def render_thumbnail(waypoints: Sequence[Waypoint], fetch_tile: TileFetcher | No
         credit.text(
             (WIDTH - 14, HEIGHT - 10),
             _ATTRIBUTION,
-            font=ImageFont.load_default(size=22),
+            font=_font(22),
             fill=(110, 110, 110),
             anchor="rd",
         )

@@ -11,7 +11,7 @@ import {
   planMission,
   savePlan,
 } from "./api/client";
-import { modeInfo, pointsFromGeometry, toGeometry } from "./api/geometry";
+import { modeInfo, pointsFromGeometry, supportsTerrain, toGeometry } from "./api/geometry";
 import type {
   Camera,
   DemSource,
@@ -132,9 +132,16 @@ export function selectRequest(
 ): PlanRequest | null {
   const geometry = toGeometry(s.mode, s.points);
   if (!geometry) return null;
-  if (s.params.terrain && !s.params.takeoff) return null;
-  const request: PlanRequest = { mode: s.mode, geometry, params: s.params };
-  if (s.task && s.params.terrain && s.demSource && s.demSource !== "online") {
+  // the terrain switch lives in the settings of some modes only: elsewhere it is simply off,
+  // whatever an earlier mode left behind
+  const terrain = s.params.terrain && supportsTerrain(s.mode);
+  if (terrain && !s.params.takeoff) return null;
+  const request: PlanRequest = {
+    mode: s.mode,
+    geometry,
+    params: terrain === s.params.terrain ? s.params : { ...s.params, terrain },
+  };
+  if (s.task && terrain && s.demSource && s.demSource !== "online") {
     request.dem = { layer: s.demSource };
   }
   return request;

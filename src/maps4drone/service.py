@@ -13,13 +13,14 @@ import zipfile
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any, Literal, Optional
+from xml.etree import ElementTree
 
 from pydantic import BaseModel, Field
 from shapely.errors import ShapelyError
 from shapely.geometry import MultiPolygon, Polygon, mapping, shape
 from shapely.geometry.base import BaseGeometry
 
-from . import atom2, dji, thumbnail
+from . import atom2, dji
 from .camera import Drone, load_drones
 from .elevation import Elevation
 from .io import read_area, read_line
@@ -30,6 +31,7 @@ from .planners.facade import plan_facade
 from .planners.orbit import plan_orbit
 from .planners.survey import SurveyParams, plan_survey
 from .stats import estimate
+from .tiles import TileFetcher
 
 DRONES = load_drones()
 
@@ -103,7 +105,9 @@ def _geometry(req: PlanRequest) -> BaseGeometry:
 
 
 def _lines(geom: BaseGeometry, minimum: int) -> list[tuple[float, float]]:
-    coords = [(float(c[0]), float(c[1])) for c in getattr(geom, "coords", [])]
+    if geom.geom_type not in ("LineString", "LinearRing", "Point"):
+        raise ValueError(f"esperava uma linha, mas a geometria e {geom.geom_type}")
+    coords = [(float(c[0]), float(c[1])) for c in geom.coords]
     if len(coords) < minimum:
         raise ValueError(f"a linha precisa de pelo menos {minimum} pontos")
     return coords
@@ -246,16 +250,18 @@ def camera_payload(drone: str, altitude: float, camera: Optional[str] = None) ->
     return {"gsd_cm": cam.gsd_m(altitude) * 100, "footprint_w_m": width, "footprint_h_m": height}
 
 
-def _thumbnail(mission: Mission, tiles: thumbnail.TileFetcher) -> Optional[bytes]:
+def _thumbnail(mission: Mission, tiles: TileFetcher) -> Optional[bytes]:
     """The mission preview, or None when it cannot be drawn: it is only a nicety."""
     try:
+        from . import thumbnail  # Pillow is only needed for this picture
+
         return thumbnail.render_thumbnail(mission.waypoints, tiles)
-    except (ImportError, ValueError, OSError):
+    except Exception:  # noqa: BLE001 - a nicety must never fail the export (no Pillow, old Pillow...)
         return None
 
 
 def export_mission(
-    mission: Mission, tiles: thumbnail.TileFetcher, now_ms: Optional[int] = None
+    mission: Mission, tiles: TileFetcher, now_ms: Optional[int] = None
 ) -> ExportFile:
     """The files to take to the aircraft: a zip for the Atom 2, a KMZ (or zip of KMZ) for DJI."""
     stamp = int(time.time() * 1000) if now_ms is None else now_ms
@@ -281,22 +287,39 @@ def export_mission(
     return ExportFile(buf.getvalue(), "application/zip", f"maps4drone-{stamp}.zip")
 
 
+MAX_IMPORT_BYTES = 20_000_000
+# what a truncated, empty or oddly shaped KML/KMZ/GeoJSON makes the readers raise
+_UNREADABLE = (
+    ValueError,
+    ShapelyError,
+    StopIteration,
+    KeyError,
+    IndexError,
+    AttributeError,
+    TypeError,
+    zipfile.BadZipFile,
+    ElementTree.ParseError,
+)
+
+
 def import_payload(name: str, data: bytes) -> dict[str, Any]:
     """Raw .kml/.kmz/.geojson bytes -> the first polygon and/or line found."""
     suffix = Path(name).suffix.lower()
     if suffix not in (".kml", ".kmz", ".geojson", ".json"):
         raise ValueError("formato nao suportado (use .kml, .kmz ou .geojson)")
+    if len(data) > MAX_IMPORT_BYTES:
+        raise ValueError(f"o arquivo passa de {MAX_IMPORT_BYTES // 1_000_000} MB")
     with tempfile.TemporaryDirectory() as tmp:
         path = Path(tmp) / f"upload{suffix}"
         path.write_bytes(data)
         result: dict[str, Any] = {"polygon": None, "line": None}
         try:
             result["polygon"] = mapping(read_area(path))
-        except (ValueError, ShapelyError, StopIteration):
+        except _UNREADABLE:
             pass
         try:
             result["line"] = {"type": "LineString", "coordinates": read_line(path)}
-        except (ValueError, ShapelyError, StopIteration):
+        except _UNREADABLE:
             pass
     if result["polygon"] is None and result["line"] is None:
         raise ValueError("nenhum poligono ou linha encontrado no arquivo")

@@ -196,7 +196,7 @@ def test_the_manifest_has_nothing_that_could_hide_the_plugin():
 
 
 class FakeStore:
-    """The slice of WebODM's data store the plans use, kept in a dict."""
+    """The slice of the plugin data store the plans use, kept in a dict of JSON values."""
 
     def __init__(self):
         self.data = {}
@@ -206,6 +206,17 @@ class FakeStore:
 
     def set_json(self, key, value):
         self.data[key] = json.loads(json.dumps(value))
+
+    def del_key(self, key):
+        self.data.pop(key, None)
+
+    def items(self, prefix):
+        return [self.get_json(k) for k in self.data if k.startswith(prefix)]
+
+
+def pid(n):
+    """A plan id as the server makes them: 32 hex digits."""
+    return f"{n:032x}"
 
 
 def plan_body(name="Chácara norte", **overrides):
@@ -224,37 +235,40 @@ def store():
 
 
 def test_a_saved_plan_keeps_what_the_planner_reads(logic, store):
-    plan = logic.save_plan(store, 4, plan_body(), "luiz", "2026-10-18T10:00:00+00:00", "a1")
-    assert plan["id"] == "a1" and plan["name"] == "Chácara norte"
+    plan = logic.save_plan(store, 4, plan_body(), "luiz", "2026-10-18T10:00:00+00:00", pid(1))
+    assert plan["id"] == pid(1) and plan["name"] == "Chácara norte"
     assert plan["status"] == "planned" and plan["task_id"] is None
     assert plan["created_by"] == plan["updated_by"] == "luiz"
     assert set(plan["request"]) == {"mode", "geometry", "params"}  # junk is dropped
     assert logic.list_plans(store, 4) == [plan]
-    assert logic.list_plans(store, 5) == []  # another project's plans are another list
+    assert logic.list_plans(store, 5) == []  # another project's plans are another set
+    assert list(store.data) == [f"plan:4:{pid(1)}"]  # one key per plan
+
+
+def test_two_saves_at_once_cannot_overwrite_each_others_plan(logic, store):
+    """Each plan has a key of its own, so the second save cannot rewrite the first one."""
+    logic.save_plan(store, 4, plan_body("A"), "ana", "2026-10-18T10:00:00+00:00", pid(1))
+    logic.save_plan(store, 4, plan_body("B"), "bia", "2026-10-18T10:00:00+00:00", pid(2))
+    logic.link_plan(store, 4, pid(1), "5b0b5a54-0000-4000-8000-000000000001", "t", "ana")
+    names = sorted((p["name"], p["status"]) for p in logic.list_plans(store, 4))
+    assert names == [("A", "flown"), ("B", "planned")]
 
 
 def test_the_most_recently_changed_plan_comes_first(logic, store):
-    logic.save_plan(store, 4, plan_body("A"), "ana", "2026-10-18T10:00:00+00:00", "a")
-    logic.save_plan(store, 4, plan_body("B"), "ana", "2026-10-18T11:00:00+00:00", "b")
+    logic.save_plan(store, 4, plan_body("A"), "ana", "2026-10-18T10:00:00+00:00", pid(1))
+    logic.save_plan(store, 4, plan_body("B"), "ana", "2026-10-18T11:00:00+00:00", pid(2))
     assert [p["name"] for p in logic.list_plans(store, 4)] == ["B", "A"]
-    logic.save_plan(
-        store, 4, {**plan_body("A bis"), "id": "a"}, "ana", "2026-10-18T12:00:00+00:00", "x"
-    )
+    renamed = {**plan_body("A bis"), "id": pid(1)}
+    logic.save_plan(store, 4, renamed, "ana", "2026-10-18T12:00:00+00:00", pid(3))
     assert [p["name"] for p in logic.list_plans(store, 4)] == ["A bis", "B"]
 
 
 def test_updating_a_plan_keeps_its_origin_and_task_link(logic, store):
-    logic.save_plan(store, 4, plan_body(), "ana", "2026-10-18T10:00:00+00:00", "a")
-    logic.link_plan(store, 4, "a", "task-1", "2026-10-18T11:00:00+00:00", "ana")
-    updated = logic.save_plan(
-        store,
-        4,
-        {**plan_body("Renomeado"), "id": "a"},
-        "bia",
-        "2026-10-18T12:00:00+00:00",
-        "unused",
-    )
-    assert updated["id"] == "a" and updated["name"] == "Renomeado"
+    logic.save_plan(store, 4, plan_body(), "ana", "2026-10-18T10:00:00+00:00", pid(1))
+    logic.link_plan(store, 4, pid(1), "task-1", "2026-10-18T11:00:00+00:00", "ana")
+    body = {**plan_body("Renomeado"), "id": pid(1)}
+    updated = logic.save_plan(store, 4, body, "bia", "2026-10-18T12:00:00+00:00", pid(9))
+    assert updated["id"] == pid(1) and updated["name"] == "Renomeado"
     assert updated["created_by"] == "ana" and updated["updated_by"] == "bia"
     assert updated["created_at"] == "2026-10-18T10:00:00+00:00"
     assert updated["task_id"] == "task-1" and updated["status"] == "flown"
@@ -262,7 +276,7 @@ def test_updating_a_plan_keeps_its_origin_and_task_link(logic, store):
 
 
 def test_a_plan_must_have_a_name_and_a_drawn_geometry(logic, store):
-    save = lambda body: logic.save_plan(store, 4, body, "ana", "t", "a")  # noqa: E731
+    save = lambda body: logic.save_plan(store, 4, body, "ana", "t", pid(1))  # noqa: E731
     with pytest.raises(ValueError, match="nome"):
         save(plan_body("   "))
     with pytest.raises(ValueError, match="120"):
@@ -280,44 +294,58 @@ def test_a_plan_must_have_a_name_and_a_drawn_geometry(logic, store):
 
 def test_a_huge_plan_is_refused(logic, store):
     big = {"type": "MultiPoint", "coordinates": [[-51.9 + i * 1e-6, -23.1] for i in range(12_000)]}
+    body = plan_body(mode="waypoints", geometry=big)
     with pytest.raises(ValueError, match="grande demais"):
-        logic.save_plan(store, 4, plan_body(mode="waypoints", geometry=big), "ana", "t", "a")
+        logic.save_plan(store, 4, body, "ana", "t", pid(1))
 
 
 def test_a_project_has_a_limit_of_plans(logic, store):
     for i in range(logic.MAX_PLANS_PER_PROJECT):
-        logic.save_plan(store, 4, plan_body(f"P{i}"), "ana", f"t{i:04d}", f"id{i}")
+        logic.save_plan(store, 4, plan_body(f"P{i}"), "ana", f"t{i:04d}", pid(i + 1))
     with pytest.raises(ValueError, match="apague"):
-        logic.save_plan(store, 4, plan_body("one too many"), "ana", "t9999", "late")
+        logic.save_plan(store, 4, plan_body("one too many"), "ana", "t9999", pid(999))
     # updating an existing one is still fine at the limit
-    logic.save_plan(store, 4, {**plan_body("renamed"), "id": "id0"}, "ana", "t9999", "unused")
+    logic.save_plan(store, 4, {**plan_body("renamed"), "id": pid(1)}, "ana", "t9999", pid(999))
 
 
 def test_updating_a_plan_that_is_gone_says_so(logic, store):
     with pytest.raises(logic.PlanNotFound):
-        logic.save_plan(store, 4, {**plan_body(), "id": "ghost"}, "ana", "t", "a")
+        logic.save_plan(store, 4, {**plan_body(), "id": pid(7)}, "ana", "t", pid(1))
+
+
+def test_an_id_that_is_not_one_of_ours_never_reaches_the_store(logic, store):
+    """The id comes from the client: a key like "plan:4:x:y" or a path must not be buildable."""
+    store.data["plan:5:" + pid(1)] = {"id": pid(1)}  # another project's plan
+    for evil in ("../5/" + pid(1), "x:y", pid(1)[:-1], pid(1).upper(), "", "a" * 33):
+        with pytest.raises(logic.PlanNotFound):
+            logic.delete_plan(store, 4, evil)
+        with pytest.raises(logic.PlanNotFound):
+            logic.link_plan(store, 4, evil, None, "t", "ana")
+    assert "plan:5:" + pid(1) in store.data  # untouched
 
 
 def test_deleting_removes_only_that_plan(logic, store):
-    logic.save_plan(store, 4, plan_body("A"), "ana", "t1", "a")
-    logic.save_plan(store, 4, plan_body("B"), "ana", "t2", "b")
-    logic.delete_plan(store, 4, "a")
-    assert [p["id"] for p in logic.list_plans(store, 4)] == ["b"]
+    logic.save_plan(store, 4, plan_body("A"), "ana", "t1", pid(1))
+    logic.save_plan(store, 4, plan_body("B"), "ana", "t2", pid(2))
+    logic.delete_plan(store, 4, pid(1))
+    assert [p["id"] for p in logic.list_plans(store, 4)] == [pid(2)]
     with pytest.raises(logic.PlanNotFound):
-        logic.delete_plan(store, 4, "a")
+        logic.delete_plan(store, 4, pid(1))
 
 
 def test_linking_a_task_marks_the_plan_flown_and_unlinking_undoes_it(logic, store):
-    logic.save_plan(store, 4, plan_body(), "ana", "t1", "a")
-    flown = logic.link_plan(store, 4, "a", "task-9", "t2", "bia")
+    logic.save_plan(store, 4, plan_body(), "ana", "t1", pid(1))
+    flown = logic.link_plan(store, 4, pid(1), "task-9", "t2", "bia")
     assert (flown["status"], flown["task_id"], flown["updated_by"]) == ("flown", "task-9", "bia")
     assert logic.list_plans(store, 4)[0]["task_id"] == "task-9"
-    planned = logic.link_plan(store, 4, "a", None, "t3", "bia")
+    planned = logic.link_plan(store, 4, pid(1), None, "t3", "bia")
     assert (planned["status"], planned["task_id"]) == ("planned", None)
     with pytest.raises(logic.PlanNotFound):
-        logic.link_plan(store, 4, "ghost", "task-9", "t4", "bia")
+        logic.link_plan(store, 4, pid(5), "task-9", "t4", "bia")
 
 
-def test_the_store_may_hold_anything_for_a_project_without_breaking_the_list(logic, store):
-    store.data["plans:4"] = {"not": "a list"}
-    assert logic.list_plans(store, 4) == []
+def test_stray_values_under_the_prefix_do_not_break_the_list(logic, store):
+    logic.save_plan(store, 4, plan_body(), "ana", "t1", pid(1))
+    store.data["plan:4:" + pid(2)] = {"not": "a plan"}
+    store.data["plan:4:" + pid(3)] = "garbage"
+    assert [p["id"] for p in logic.list_plans(store, 4)] == [pid(1)]

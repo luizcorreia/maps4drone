@@ -108,3 +108,54 @@ def test_camera_payload_gives_gsd_and_footprint():
     assert payload["gsd_cm"] == pytest.approx(3.5556, abs=1e-3)
     with pytest.raises(ValueError, match="drone desconhecido"):
         service.camera_payload("nope", 100)
+
+
+@pytest.mark.parametrize(
+    ("name", "data"),
+    [
+        ("trunc.kml", b"<kml><oops"),
+        ("fake.kmz", b"this is not a zip"),
+        ("nullgeom.geojson", b'{"type":"Feature","properties":{},"geometry":null}'),
+        ("bare.geojson", b'{"type":"Polygon"}'),
+        (
+            "empty.kml",
+            b"<kml xmlns='http://www.opengis.net/kml/2.2'><Placemark><Polygon/></Placemark></kml>",
+        ),
+        ("garbage.json", b"\xff\xfe\x00 not json"),
+    ],
+)
+def test_a_malformed_upload_is_a_value_error_not_a_crash(name, data):
+    with pytest.raises(ValueError):
+        service.import_payload(name, data)
+
+
+def test_an_oversized_upload_is_refused_before_it_is_parsed():
+    with pytest.raises(ValueError, match="MB"):
+        service.import_payload("big.geojson", b" " * (service.MAX_IMPORT_BYTES + 1))
+
+
+@pytest.mark.parametrize("mode", ["waypoints", "corridor", "facade"])
+def test_a_polygon_where_a_line_is_needed_is_a_value_error(mode):
+    with pytest.raises(ValueError, match="esperava uma linha"):
+        service.build_mission(request(mode=mode), flat)
+
+
+def test_the_service_imports_without_pillow_and_the_export_just_drops_the_picture():
+    import subprocess
+    import sys
+
+    code = (
+        "import sys; sys.modules['PIL'] = None\n"
+        "from maps4drone import service\n"
+        "from maps4drone.service import PlanRequest\n"
+        "area = {'type':'Polygon','coordinates':[[[-51.9,-23.15],[-51.8964,-23.15],"
+        "[-51.8964,-23.1473],[-51.9,-23.1473],[-51.9,-23.15]]]}\n"
+        "req = PlanRequest(mode='grid', geometry=area, params={})\n"
+        "m = service.build_mission(req, lambda p: [0.0] * len(p))\n"
+        "f = service.export_mission(m, lambda z, x, y: None)\n"
+        "import zipfile, io; names = zipfile.ZipFile(io.BytesIO(f.data)).namelist()\n"
+        "print('OK', sorted(names)[-1], any(n.endswith('.jpg') for n in names))\n"
+    )
+    out = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True)
+    assert out.returncode == 0, out.stderr
+    assert out.stdout.strip().startswith("OK") and out.stdout.strip().endswith("False")

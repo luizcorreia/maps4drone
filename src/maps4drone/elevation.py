@@ -32,16 +32,23 @@ def open_meteo_elevation(timeout: float = 20.0) -> Elevation:
             return [float(v) for v in json.load(resp)["elevation"]]
 
     def lookup(points: Sequence[LonLat]) -> list[float]:
-        """Cached per rounded point, so tweaking altitude or overlap never refetches."""
-        missing = list(dict.fromkeys(k for k in map(_key, points) if k not in _cache))
+        """Cached per rounded point, so tweaking altitude or overlap never refetches.
+
+        The answer is gathered in a local dict: the shared cache may be cleared meanwhile (it
+        is bounded, and other requests use it), and that must not cost this call its values.
+        """
+        keys = list(dict.fromkeys(map(_key, points)))
+        found = {k: v for k in keys if (v := _cache.get(k)) is not None}
+        missing = [k for k in keys if k not in found]
         for i in range(0, len(missing), _BATCH):
             chunk = missing[i : i + _BATCH]
             values = fetch(chunk)
             if len(values) != len(chunk):
                 raise RuntimeError("elevation service returned an unexpected number of values")
+            found.update(zip(chunk, values))
             if len(_cache) > _CACHE_LIMIT:
                 _cache.clear()
             _cache.update(zip(chunk, values))
-        return [_cache[_key(p)] for p in points]
+        return [found[_key(p)] for p in points]
 
     return lookup

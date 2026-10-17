@@ -265,6 +265,33 @@ describe("WebODM task", () => {
   });
 });
 
+describe("terrain in modes that cannot follow it", () => {
+  const withTerrain = {
+    points: SQUARE,
+    params: { ...DEFAULT_PARAMS, terrain: true, takeoff: [-51.9, -23.15] as [number, number] },
+    task: null,
+    demSource: "online" as const,
+  };
+
+  it("is sent as off for an orbit or a facade, whatever an earlier mode left on", () => {
+    for (const mode of ["orbit", "facade"] as const) {
+      const request = selectRequest({ ...withTerrain, mode, points: SQUARE.slice(0, 2) });
+      expect(request?.params.terrain).toBe(false);
+    }
+    expect(selectRequest({ ...withTerrain, mode: "grid" })?.params.terrain).toBe(true);
+    expect(selectRequest({ ...withTerrain, mode: "waypoints" })?.params.terrain).toBe(true);
+  });
+
+  it("does not wait for a takeoff point nobody can set, nor ask for a model", () => {
+    const params = { ...withTerrain.params, takeoff: null };
+    expect(selectRequest({ ...withTerrain, mode: "orbit", params })).not.toBeNull();
+    expect(selectRequest({ ...withTerrain, mode: "grid", params })).toBeNull(); // grid still needs it
+    const task = { ...TASK, assets: { ...TASK.assets } };
+    const request = selectRequest({ ...withTerrain, mode: "orbit", task, demSource: "dsm" });
+    expect(request?.dem).toBeUndefined();
+  });
+});
+
 describe("selectRequest", () => {
   it("builds the GeoJSON for the current mode", () => {
     const req = selectRequest({

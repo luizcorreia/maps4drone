@@ -3,9 +3,10 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+import time
 from pathlib import Path
 
-from . import __version__, atom2
+from . import __version__, atom2, dji
 from .camera import Drone, load_drones
 from .elevation import open_meteo_elevation
 from .io import read_area, read_line
@@ -168,6 +169,17 @@ def _build(a: argparse.Namespace, drone_id: str, drones: dict[str, Drone]) -> Mi
     )
 
 
+def _write_dji(mission: Mission, out: Path) -> Path:
+    """The DJI KMZ (several, when the route needs more than one flight) next to the preview."""
+    out.mkdir(parents=True, exist_ok=True)
+    stamp = int(time.time() * 1000)
+    files = dji.mission_kmz(mission)
+    for n, data in enumerate(files, 1):
+        suffix = f"-voo{n}de{len(files)}" if len(files) > 1 else ""
+        (out / f"maps4drone-{stamp}{suffix}.kmz").write_bytes(data)
+    return out
+
+
 def main(argv: list[str] | None = None) -> int:
     args = _build_parser().parse_args(argv)
     drones = load_drones(args.drones_file)
@@ -181,7 +193,11 @@ def main(argv: list[str] | None = None) -> int:
         if getattr(args, "terrain", False) and not args.takeoff:
             raise ValueError("--terrain needs --takeoff LAT,LNG")
         mission = _build(args, args.drone, drones)
-        if args.replace:
+        if mission.drone.export_format == "dji":
+            if args.replace:
+                raise ValueError("--replace is for the Potensic Atom 2 only")
+            folder = _write_dji(mission, args.out)
+        elif args.replace:
             folder = atom2.replace_mission(mission, args.replace, args.legacy_poi_list)
         else:
             folder = atom2.write_mission(mission, args.out, legacy_poi_list=args.legacy_poi_list)

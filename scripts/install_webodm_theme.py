@@ -10,6 +10,8 @@ with the same palette as the planner. Run it with an administrator account:
 The password is read from WEBODM_PASSWORD, or asked for.
 """
 
+from __future__ import annotations
+
 import argparse
 import getpass
 import http.cookiejar
@@ -134,9 +136,9 @@ def install(admin: Admin) -> str:
     # the colour widget posts hex digits without the "#", and refuses a value that has it
     form.fields = {k: HEX.sub(r"\1", v) for k, v in form.fields.items()}
     form.fields["_save"] = "Save"
-    admin.post(path, form.fields)
+    answer = admin.post(path, form.fields)
     saved = theme_id(admin, colours["name"])
-    if saved is None:
+    if saved is None or "errorlist" in answer:  # a refused form comes back with its errors
         raise SystemExit("the theme was not saved: the admin form refused it")
     print(f"theme '{colours['name']}' {'updated' if existing else 'created'} (id {saved})")
     return colours["name"]

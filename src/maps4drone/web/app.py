@@ -8,7 +8,7 @@ from fastapi import Depends, FastAPI, Request, Response
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
-from .. import service, thumbnail
+from .. import service, tiles
 from ..elevation import Elevation, open_meteo_elevation
 from ..service import PlanRequest
 
@@ -31,8 +31,8 @@ def get_elevation() -> Elevation:
     return open_meteo_elevation()
 
 
-def get_tiles() -> thumbnail.TileFetcher:
-    return thumbnail.osm_tiles()
+def get_tiles() -> tiles.TileFetcher:
+    return tiles.osm_tiles()
 
 
 @app.get("/api/drones")
@@ -56,9 +56,9 @@ def plan(
 def export(
     req: PlanRequest,
     elevation: Annotated[Elevation, Depends(get_elevation)],
-    tiles: Annotated[thumbnail.TileFetcher, Depends(get_tiles)],
+    fetch_tile: Annotated[tiles.TileFetcher, Depends(get_tiles)],
 ) -> Response:
-    file = service.export_mission(service.build_mission(req, elevation), tiles)
+    file = service.export_mission(service.build_mission(req, elevation), fetch_tile)
     return Response(
         file.data,
         media_type=file.media_type,

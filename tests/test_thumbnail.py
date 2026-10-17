@@ -90,3 +90,15 @@ def test_long_routes_number_a_bounded_set_of_pins():
 def test_a_single_waypoint_has_nothing_to_draw():
     with pytest.raises(ValueError, match="at least 2"):
         render_thumbnail(ROUTE[:1])
+
+
+def test_an_old_pillow_without_sized_fonts_still_draws(monkeypatch):
+    real = thumbnail.ImageFont.load_default
+
+    def old_pillow(size=None):  # Pillow before 10.1 has no `size` argument
+        if size is not None:
+            raise TypeError("load_default() got an unexpected keyword argument 'size'")
+        return real()
+
+    monkeypatch.setattr(thumbnail.ImageFont, "load_default", old_pillow)
+    assert render_thumbnail(ROUTE)[:3] == b"\xff\xd8\xff"

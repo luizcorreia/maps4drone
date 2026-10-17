@@ -1,5 +1,6 @@
 import { useState } from "react";
 
+import { supportsTerrain } from "../api/geometry";
 import type { Mode, Params } from "../api/types";
 import { selectDrone, useStore } from "../store";
 import { Field, Toggle } from "../ui/Field";
@@ -9,7 +10,6 @@ type NumericParam = {
 }[keyof Params];
 
 const SURVEY_MODES: readonly Mode[] = ["grid", "double_grid", "corridor"];
-const TERRAIN_MODES: readonly Mode[] = ["waypoints", ...SURVEY_MODES];
 
 const DEM_LABELS = {
   dsm: "DSM do projeto (inclui árvores e prédios)",
@@ -145,9 +145,12 @@ export function SettingsStep() {
         <Field
           label="Passadas"
           value={params.lines}
-          onChange={num("lines")}
+          onChange={(v) => {
+            setParam("lines", v % 2 === 0 ? Math.min(15, v + 1) : v); // the planner wants an odd number
+          }}
           min={1}
           max={15}
+          step={2}
           hint="Número ímpar: uma sobre o eixo e uma de cada lado por par."
         />
       )}
@@ -298,7 +301,7 @@ export function SettingsStep() {
         </div>
       )}
 
-      {TERRAIN_MODES.includes(mode) && <Terrain />}
+      {supportsTerrain(mode) && <Terrain />}
 
       <button
         type="button"

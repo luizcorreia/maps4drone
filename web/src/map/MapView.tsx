@@ -3,16 +3,19 @@ import "leaflet/dist/leaflet.css";
 import { useMemo, useState } from "react";
 import { MapContainer, TileLayer } from "react-leaflet";
 
+import { insideWebodm } from "../api/client";
 import { modeInfo } from "../api/geometry";
 import { ElevationProfile } from "../flight/ElevationProfile";
 import { InfoCard } from "../flight/InfoCard";
 import { Legend } from "../flight/Legend";
+import { PlaceSearch } from "./PlaceSearch";
 import { useStore } from "../store";
 import { BASEMAPS, projectBasemap } from "./basemaps";
 import {
   DrawnShape,
   FitOnImport,
   FitToPlan,
+  FitToTarget,
   FitToTask,
   LocateOnStart,
   MapClicks,
@@ -57,7 +60,8 @@ export function MapView() {
     [task],
   );
   const [chosen, setBasemapId] = useState<string | null>(null); // null: the default
-  const basemap = basemaps.find((b) => b.id === chosen) ?? basemaps[0];
+  const fallback = insideWebodm() && !task?.assets.orthophoto ? "satellite" : undefined;
+  const basemap = basemaps.find((b) => b.id === (chosen ?? fallback)) ?? basemaps[0];
   const picking = useStore((s) => s.pickingTakeoff);
   const hint = useHint();
 
@@ -79,6 +83,7 @@ export function MapView() {
         <PlannedRoute />
         <TakeoffMarker />
         <FitToTask />
+        <FitToTarget />
         <FitToPlan />
         <FitOnImport />
         <LocateOnStart />
@@ -100,6 +105,7 @@ export function MapView() {
       </div>
 
       <div className="map-cards">
+        <PlaceSearch />
         <InfoCard />
         <Legend />
       </div>

@@ -133,6 +133,8 @@ export interface WebodmTask {
   /** 40 means completed. */
   status: number | null;
   available_assets: string[] | null;
+  /** [west, south, east, north] of what the task mapped, once it has. */
+  extent?: [number, number, number, number] | null;
 }
 
 /** A flight plan kept on the server, under a WebODM project. */

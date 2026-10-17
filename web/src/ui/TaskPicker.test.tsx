@@ -6,7 +6,7 @@ import { App } from "../App";
 import * as client from "../api/client";
 import type { TaskContext } from "../api/types";
 import { useStore } from "../store";
-import { hasMap, TaskPicker } from "./TaskPicker";
+import { hasMap, TaskPicker, unionBounds } from "./TaskPicker";
 
 vi.mock("../api/client");
 
@@ -56,6 +56,7 @@ beforeEach(() => {
     planName: "",
     savedSnapshot: null,
     plansError: null,
+    viewTarget: null,
   });
   window.history.replaceState(null, "", "/plugins/maps4drone/index.html");
 });
@@ -73,7 +74,74 @@ describe("hasMap", () => {
   });
 });
 
+describe("unionBounds", () => {
+  const task = (extent: [number, number, number, number] | null) => ({
+    id: "t",
+    name: "t",
+    status: 40,
+    available_assets: [],
+    extent,
+  });
+
+  it("holds every task's extent, as [[south, west], [north, east]]", () => {
+    expect(
+      unionBounds([
+        task([-44.9, -20.15, -44.89, -20.14]),
+        task([-44.8, -20.2, -44.7, -20.1]),
+        task(null),
+      ]),
+    ).toEqual([
+      [-20.2, -44.9],
+      [-20.1, -44.7],
+    ]);
+  });
+
+  it("is null when nothing has an extent", () => {
+    expect(unionBounds([task(null)])).toBeNull();
+    expect(unionBounds([])).toBeNull();
+  });
+});
+
 describe("TaskPicker", () => {
+  it("takes the map to the ground a project's earlier flights covered, until something is drawn", async () => {
+    vi.mocked(client.fetchProjectTasks).mockResolvedValue([
+      {
+        id: "t1",
+        name: "A",
+        status: 40,
+        available_assets: ["dsm.tif"],
+        extent: [-44.9, -20.15, -44.89, -20.14],
+      },
+    ]);
+    render(<TaskPicker />);
+    await screen.findByRole("option", { name: "Primeiro projeto" });
+    await userEvent.selectOptions(screen.getByLabelText("Projeto do WebODM"), "1");
+    await waitFor(() => {
+      expect(useStore.getState().viewTarget?.bounds).toEqual([
+        [-20.15, -44.9],
+        [-20.14, -44.89],
+      ]);
+    });
+  });
+
+  it("leaves the map alone when the user has already drawn", async () => {
+    useStore.setState({ points: [[-51.9, -23.15]] });
+    vi.mocked(client.fetchProjectTasks).mockResolvedValue([
+      {
+        id: "t1",
+        name: "A",
+        status: 40,
+        available_assets: ["dsm.tif"],
+        extent: [-44.9, -20.15, -44.89, -20.14],
+      },
+    ]);
+    render(<TaskPicker />);
+    await screen.findByRole("option", { name: "Primeiro projeto" });
+    await userEvent.selectOptions(screen.getByLabelText("Projeto do WebODM"), "1");
+    await screen.findByRole("option", { name: "A" });
+    expect(useStore.getState().viewTarget).toBeNull();
+  });
+
   it("lists the user's projects and, for one, only its tasks with a map", async () => {
     render(<TaskPicker />);
     await screen.findByRole("option", { name: "Primeiro projeto" });

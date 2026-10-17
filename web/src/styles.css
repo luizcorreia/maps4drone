@@ -834,3 +834,64 @@ button.danger {
 .plan-state-dirty {
   color: var(--warn);
 }
+
+/* ---- place search ---- */
+
+.place-search {
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--surface) 95%, transparent);
+}
+
+.place-search form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.place-search input[type="search"] {
+  flex: 1 1 100%;
+  min-width: 0;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface-2);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.8125rem;
+}
+
+.place-search button {
+  padding: 5px 10px;
+  font-size: 0.75rem;
+  white-space: nowrap;
+}
+
+.place-results {
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.place-results li {
+  margin: 0 0 4px;
+}
+
+.place-results li button {
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface-2);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.75rem;
+  text-align: left;
+  white-space: normal;
+  cursor: pointer;
+}
+
+.place-results li button:hover {
+  border-color: var(--accent);
+}

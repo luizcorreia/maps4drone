@@ -67,6 +67,8 @@ interface State {
   pickingTakeoff: boolean;
   /** Bumped when points arrive from outside the map, so the map re-frames them. */
   fitSignal: number;
+  /** Where the map should go next ([[south, west], [north, east]]); `seq` makes a repeat count. */
+  viewTarget: { bounds: [[number, number], [number, number]]; seq: number } | null;
   /** The WebODM task the page was opened for, if any. */
   task: TaskContext | null;
   demSource: DemSource;
@@ -85,6 +87,7 @@ interface State {
   loadTask: (id: string) => Promise<void>;
   clearTask: () => void;
   setProject: (id: number | null) => Promise<void>;
+  showBounds: (bounds: [[number, number], [number, number]]) => void;
   setPlanName: (name: string) => void;
   savePlan: (options?: { asCopy?: boolean }) => Promise<void>;
   openPlan: (id: string) => void;
@@ -217,6 +220,7 @@ export const useStore = create<State>()((set, get) => {
     error: null,
     pickingTakeoff: false,
     fitSignal: 0,
+    viewTarget: null,
     task: null,
     demSource: "online",
     projectId: null,
@@ -260,6 +264,10 @@ export const useStore = create<State>()((set, get) => {
       } catch (err) {
         if (get().projectId === id) set({ plansError: messageOf(err) });
       }
+    },
+
+    showBounds: (bounds) => {
+      set({ viewTarget: { bounds, seq: (get().viewTarget?.seq ?? 0) + 1 } });
     },
 
     setPlanName: (planName) => {

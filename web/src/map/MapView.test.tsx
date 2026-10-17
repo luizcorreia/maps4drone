@@ -2,6 +2,7 @@ import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import * as client from "../api/client";
 import { DEFAULT_PARAMS, useStore } from "../store";
 import { MapView } from "./MapView";
 
@@ -21,6 +22,8 @@ beforeEach(() => {
     task: null,
   });
 });
+
+vi.mock("../api/client");
 
 describe("MapView", () => {
   it("guides the user through the points the mode needs", () => {
@@ -89,6 +92,21 @@ describe("MapView", () => {
       useStore.setState({ task: null });
     });
     expect(screen.queryByRole("button", { name: "Ortofoto" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Mapa" })).toHaveAttribute("aria-pressed", "true");
+  });
+
+  it("opens on the satellite inside WebODM when the project has no orthophoto yet", () => {
+    vi.mocked(client.insideWebodm).mockReturnValue(true);
+    render(<MapView />);
+    expect(screen.getByRole("button", { name: "Satélite" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+  });
+
+  it("keeps the street map as the default of the standalone app", () => {
+    vi.mocked(client.insideWebodm).mockReturnValue(false);
+    render(<MapView />);
     expect(screen.getByRole("button", { name: "Mapa" })).toHaveAttribute("aria-pressed", "true");
   });
 

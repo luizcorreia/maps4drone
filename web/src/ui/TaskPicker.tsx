@@ -7,6 +7,18 @@ import { useStore } from "../store";
 const COMPLETED = 40;
 const MAP_ASSETS = ["orthophoto.tif", "dsm.tif", "dtm.tif"];
 
+/** The box that holds every task's extent, as [[south, west], [north, east]]; null if none has one. */
+export function unionBounds(
+  tasks: readonly WebodmTask[],
+): [[number, number], [number, number]] | null {
+  const extents = tasks.flatMap((t) => (t.extent ? [t.extent] : []));
+  if (extents.length === 0) return null;
+  return [
+    [Math.min(...extents.map((e) => e[1])), Math.min(...extents.map((e) => e[0]))],
+    [Math.max(...extents.map((e) => e[3])), Math.max(...extents.map((e) => e[2]))],
+  ];
+}
+
 /** Only completed tasks with a map are worth planning over. */
 export const hasMap = (task: WebodmTask): boolean =>
   task.status === COMPLETED && MAP_ASSETS.some((a) => task.available_assets?.includes(a));
@@ -37,12 +49,19 @@ export function TaskPicker() {
   const clearTask = useStore((s) => s.clearTask);
   const projectId = useStore((s) => s.projectId);
   const setProject = useStore((s) => s.setProject);
+  const showBounds = useStore((s) => s.showBounds);
 
   const projects: WebodmProject[] | null = useAsync(() => fetchProjects(), "projects");
   const tasks: WebodmTask[] | null = useAsync(
     () => (projectId === null ? Promise.resolve([]) : fetchProjectTasks(projectId)),
     projectId,
   );
+
+  // A project the user has not drawn on yet: land on the ground its earlier flights covered
+  useEffect(() => {
+    const bounds = tasks && !task ? unionBounds(tasks) : null;
+    if (bounds && useStore.getState().points.length === 0) showBounds(bounds);
+  }, [tasks, task, showBounds]);
 
   /** Keeps the address in step with the choice, so a reload or a shared link comes back to it. */
   const writeAddress = (project: number | null, taskId: string) => {

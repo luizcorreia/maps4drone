@@ -193,6 +193,16 @@ export function FitToTask() {
   return null;
 }
 
+/** Goes where the search box or the location button asked. */
+export function FitToTarget() {
+  const map = useMap();
+  const target = useStore((s) => s.viewTarget);
+  useEffect(() => {
+    if (target) map.fitBounds(target.bounds, { maxZoom: 18, animate: false });
+  }, [target, map]);
+  return null;
+}
+
 const LOCATE_TIMEOUT_MS = 5000;
 const LOCATE_ZOOM = 16;
 

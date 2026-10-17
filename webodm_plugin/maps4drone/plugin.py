@@ -37,4 +37,12 @@ class Plugin(PluginBase):
             MountPoint(r"task/(?P<pk>[^/.]+)/info$", views.TaskInfo.as_view()),
             MountPoint(r"task/(?P<pk>[^/.]+)/plan$", views.Plan.as_view()),
             MountPoint(r"task/(?P<pk>[^/.]+)/export$", views.Export.as_view()),
+            MountPoint(r"project/(?P<pk>[^/.]+)/plans$", views.ProjectPlans.as_view()),
+            MountPoint(
+                r"project/(?P<pk>[^/.]+)/plans/(?P<plan_id>[0-9a-f]+)$", views.ProjectPlan.as_view()
+            ),
+            MountPoint(
+                r"project/(?P<pk>[^/.]+)/plans/(?P<plan_id>[0-9a-f]+)/task$",
+                views.ProjectPlanTask.as_view(),
+            ),
         ]

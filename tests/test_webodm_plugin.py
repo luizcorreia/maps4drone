@@ -184,3 +184,134 @@ def test_the_manifest_has_nothing_that_could_hide_the_plugin():
     manifest = json.loads((PLUGIN / "manifest.json").read_text())
     assert "webodmMinVersion" not in manifest
     assert {"name", "version", "description"} <= set(manifest)
+
+
+# ---- saved flight plans ----------------------------------------------------------------------
+
+
+class FakeStore:
+    """The slice of WebODM's data store the plans use, kept in a dict."""
+
+    def __init__(self):
+        self.data = {}
+
+    def get_json(self, key, default=None):
+        return json.loads(json.dumps(self.data.get(key, default)))  # a copy, as a database gives
+
+    def set_json(self, key, value):
+        self.data[key] = json.loads(json.dumps(value))
+
+
+def plan_body(name="Chácara norte", **overrides):
+    request = {
+        "mode": "grid",
+        "geometry": AREA,
+        "params": {"drone": "atom2", "altitude": 60},
+        "ignored": "not kept",
+    }
+    return {"name": name, "request": {**request, **overrides}}
+
+
+@pytest.fixture
+def store():
+    return FakeStore()
+
+
+def test_a_saved_plan_keeps_what_the_planner_reads(logic, store):
+    plan = logic.save_plan(store, 4, plan_body(), "luiz", "2026-10-18T10:00:00+00:00", "a1")
+    assert plan["id"] == "a1" and plan["name"] == "Chácara norte"
+    assert plan["status"] == "planned" and plan["task_id"] is None
+    assert plan["created_by"] == plan["updated_by"] == "luiz"
+    assert set(plan["request"]) == {"mode", "geometry", "params"}  # junk is dropped
+    assert logic.list_plans(store, 4) == [plan]
+    assert logic.list_plans(store, 5) == []  # another project's plans are another list
+
+
+def test_the_most_recently_changed_plan_comes_first(logic, store):
+    logic.save_plan(store, 4, plan_body("A"), "ana", "2026-10-18T10:00:00+00:00", "a")
+    logic.save_plan(store, 4, plan_body("B"), "ana", "2026-10-18T11:00:00+00:00", "b")
+    assert [p["name"] for p in logic.list_plans(store, 4)] == ["B", "A"]
+    logic.save_plan(
+        store, 4, {**plan_body("A bis"), "id": "a"}, "ana", "2026-10-18T12:00:00+00:00", "x"
+    )
+    assert [p["name"] for p in logic.list_plans(store, 4)] == ["A bis", "B"]
+
+
+def test_updating_a_plan_keeps_its_origin_and_task_link(logic, store):
+    logic.save_plan(store, 4, plan_body(), "ana", "2026-10-18T10:00:00+00:00", "a")
+    logic.link_plan(store, 4, "a", "task-1", "2026-10-18T11:00:00+00:00", "ana")
+    updated = logic.save_plan(
+        store,
+        4,
+        {**plan_body("Renomeado"), "id": "a"},
+        "bia",
+        "2026-10-18T12:00:00+00:00",
+        "unused",
+    )
+    assert updated["id"] == "a" and updated["name"] == "Renomeado"
+    assert updated["created_by"] == "ana" and updated["updated_by"] == "bia"
+    assert updated["created_at"] == "2026-10-18T10:00:00+00:00"
+    assert updated["task_id"] == "task-1" and updated["status"] == "flown"
+    assert len(logic.list_plans(store, 4)) == 1
+
+
+def test_a_plan_must_have_a_name_and_a_drawn_geometry(logic, store):
+    save = lambda body: logic.save_plan(store, 4, body, "ana", "t", "a")  # noqa: E731
+    with pytest.raises(ValueError, match="nome"):
+        save(plan_body("   "))
+    with pytest.raises(ValueError, match="120"):
+        save(plan_body("x" * 121))
+    with pytest.raises(ValueError, match="desenhe"):
+        save({"name": "Vazio", "request": {"mode": "grid", "params": {}}})
+    with pytest.raises(ValueError, match="front"):
+        save(plan_body(params={"front": 150}))
+    with pytest.raises(ValueError, match="pedido"):
+        save({"name": "Sem pedido"})
+    with pytest.raises(ValueError):
+        save("not an object")
+    assert logic.list_plans(store, 4) == []  # nothing half-saved
+
+
+def test_a_huge_plan_is_refused(logic, store):
+    big = {"type": "MultiPoint", "coordinates": [[-51.9 + i * 1e-6, -23.1] for i in range(12_000)]}
+    with pytest.raises(ValueError, match="grande demais"):
+        logic.save_plan(store, 4, plan_body(mode="waypoints", geometry=big), "ana", "t", "a")
+
+
+def test_a_project_has_a_limit_of_plans(logic, store):
+    for i in range(logic.MAX_PLANS_PER_PROJECT):
+        logic.save_plan(store, 4, plan_body(f"P{i}"), "ana", f"t{i:04d}", f"id{i}")
+    with pytest.raises(ValueError, match="apague"):
+        logic.save_plan(store, 4, plan_body("one too many"), "ana", "t9999", "late")
+    # updating an existing one is still fine at the limit
+    logic.save_plan(store, 4, {**plan_body("renamed"), "id": "id0"}, "ana", "t9999", "unused")
+
+
+def test_updating_a_plan_that_is_gone_says_so(logic, store):
+    with pytest.raises(logic.PlanNotFound):
+        logic.save_plan(store, 4, {**plan_body(), "id": "ghost"}, "ana", "t", "a")
+
+
+def test_deleting_removes_only_that_plan(logic, store):
+    logic.save_plan(store, 4, plan_body("A"), "ana", "t1", "a")
+    logic.save_plan(store, 4, plan_body("B"), "ana", "t2", "b")
+    logic.delete_plan(store, 4, "a")
+    assert [p["id"] for p in logic.list_plans(store, 4)] == ["b"]
+    with pytest.raises(logic.PlanNotFound):
+        logic.delete_plan(store, 4, "a")
+
+
+def test_linking_a_task_marks_the_plan_flown_and_unlinking_undoes_it(logic, store):
+    logic.save_plan(store, 4, plan_body(), "ana", "t1", "a")
+    flown = logic.link_plan(store, 4, "a", "task-9", "t2", "bia")
+    assert (flown["status"], flown["task_id"], flown["updated_by"]) == ("flown", "task-9", "bia")
+    assert logic.list_plans(store, 4)[0]["task_id"] == "task-9"
+    planned = logic.link_plan(store, 4, "a", None, "t3", "bia")
+    assert (planned["status"], planned["task_id"]) == ("planned", None)
+    with pytest.raises(logic.PlanNotFound):
+        logic.link_plan(store, 4, "ghost", "task-9", "t4", "bia")
+
+
+def test_the_store_may_hold_anything_for_a_project_without_breaking_the_list(logic, store):
+    store.data["plans:4"] = {"not": "a list"}
+    assert logic.list_plans(store, 4) == []

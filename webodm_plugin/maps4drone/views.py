@@ -1,5 +1,11 @@
 """Django REST views of the plugin: thin wrappers over logic.py and the maps4drone service."""
 
+import uuid
+from datetime import datetime, timezone
+
+from app.api.common import get_and_check_project
+from app.models import Task
+from app.plugins import GlobalDataStore
 from app.plugins.views import TaskView
 from django.http import HttpResponse
 from rest_framework import status
@@ -95,5 +101,73 @@ class TaskInfo(TaskView):
         return Response(
             logic.task_info(
                 str(task.id), task.project.id, task.name, task.get_extent(), task.available_assets
+            )
+        )
+
+
+PLUGIN = "maps4drone"
+
+
+def _store():
+    return GlobalDataStore(PLUGIN)
+
+
+def _now():
+    return datetime.now(timezone.utc).isoformat(timespec="seconds")
+
+
+def _answer(call):
+    """Run a plan-store call and turn its failures into HTTP answers."""
+    try:
+        return Response(call())
+    except logic.PlanNotFound:
+        return _error("plano nao encontrado", status.HTTP_404_NOT_FOUND)
+    except ValueError as err:
+        return _error(str(err), status.HTTP_422_UNPROCESSABLE_ENTITY)
+
+
+class ProjectPlans(APIView):
+    """GET lists the project's saved plans; POST saves one (with an id: updates it)."""
+
+    permission_classes = (IsAuthenticated,)
+
+    def get(self, request, pk=None):
+        project = get_and_check_project(request, pk)
+        return Response(logic.list_plans(_store(), project.id))
+
+    def post(self, request, pk=None):
+        project = get_and_check_project(request, pk, perms=("change_project",))
+        return _answer(
+            lambda: logic.save_plan(
+                _store(), project.id, request.data, request.user.username, _now(), uuid.uuid4().hex
+            )
+        )
+
+
+class ProjectPlan(APIView):
+    permission_classes = (IsAuthenticated,)
+
+    def delete(self, request, pk=None, plan_id=None):
+        project = get_and_check_project(request, pk, perms=("change_project",))
+        return _answer(
+            lambda: logic.delete_plan(_store(), project.id, plan_id) or {"deleted": plan_id}
+        )
+
+
+class ProjectPlanTask(APIView):
+    """POST {"task": "<id>"} ties the plan to a task of the same project; null unties it."""
+
+    permission_classes = (IsAuthenticated,)
+
+    def post(self, request, pk=None, plan_id=None):
+        project = get_and_check_project(request, pk, perms=("change_project",))
+        task_id = request.data.get("task") if hasattr(request.data, "get") else None
+        if task_id and not Task.objects.filter(pk=task_id, project=project).exists():
+            return _error(
+                "a tarefa nao pertence a este projeto", status.HTTP_422_UNPROCESSABLE_ENTITY
+            )
+        return _answer(
+            lambda: logic.link_plan(
+                _store(), project.id, plan_id, task_id or None, _now(), request.user.username
             )
         )

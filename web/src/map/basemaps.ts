@@ -23,7 +23,8 @@ const SATELLITE: TileSource = {
   url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
   attribution: "Esri, Maxar, Earthstar Geographics",
   maxZoom: 22,
-  maxNativeZoom: 19,
+  // Past this level Esri serves "Map data not yet available" tiles for much of the world
+  maxNativeZoom: 17,
 };
 
 const LABELS: TileSource = {

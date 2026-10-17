@@ -75,6 +75,8 @@ beforeEach(() => {
     points: [],
     params: DEFAULT_PARAMS,
     plan: null,
+    showShots: false,
+    shots: null,
   });
 });
 
@@ -111,6 +113,19 @@ describe("InfoCard", () => {
 });
 
 describe("Legend", () => {
+  it("lists the photos taken only while they are on the map", () => {
+    useStore.setState({
+      plan: plan(6),
+      showShots: true,
+      shots: [{ position: [0, 0], filename: null }],
+    });
+    const { rerender } = render(<Legend />);
+    expect(screen.getByText("Foto tirada")).toBeInTheDocument();
+    useStore.setState({ showShots: false });
+    rerender(<Legend />);
+    expect(screen.queryByText("Foto tirada")).not.toBeInTheDocument();
+  });
+
   it("lists the takeoff marker only when there is a takeoff point", () => {
     useStore.setState({ plan: plan(6) });
     const { rerender } = render(<Legend />);

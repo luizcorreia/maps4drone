@@ -92,6 +92,24 @@ export function DrawnShape() {
   );
 }
 
+const SHOT_STYLE = { color: "#0d1117", weight: 1, fillColor: "#f0883e", fillOpacity: 1 };
+
+/** Where the aircraft really took its photos, over the plan. */
+export function ShotsLayer() {
+  const show = useStore((s) => s.showShots);
+  const shots = useStore((s) => s.shots);
+  if (!show || !shots) return null;
+  return (
+    <>
+      {shots.map((shot, i) => (
+        <CircleMarker key={i} center={toLatLng(shot.position)} radius={6} pathOptions={SHOT_STYLE}>
+          <Tooltip>{shot.filename ?? `Foto ${(i + 1).toString()}`}</Tooltip>
+        </CircleMarker>
+      ))}
+    </>
+  );
+}
+
 const MAX_WAYPOINT_DOTS = 1500;
 
 export function PlannedRoute() {

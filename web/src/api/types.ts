@@ -77,7 +77,7 @@ export interface TaskContext {
   name: string;
   /** [west, south, east, north] */
   extent: [number, number, number, number] | null;
-  assets: { orthophoto: boolean; dsm: boolean; dtm: boolean };
+  assets: { orthophoto: boolean; dsm: boolean; dtm: boolean; shots: boolean };
   /** Leaflet tile URL template of the task's orthophoto. */
   tiles: string;
 }
@@ -135,6 +135,12 @@ export interface WebodmTask {
   available_assets: string[] | null;
   /** [west, south, east, north] of what the task mapped, once it has. */
   extent?: [number, number, number, number] | null;
+}
+
+/** Where the aircraft really took a photo, from a task's shots.geojson. */
+export interface Shot {
+  position: LngLat;
+  filename: string | null;
 }
 
 /** A flight plan kept on the server, under a WebODM project. */

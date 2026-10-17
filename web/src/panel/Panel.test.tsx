@@ -158,7 +158,7 @@ describe("Panel", () => {
         project: 1,
         name: "Fazenda",
         extent: null,
-        assets: { orthophoto: true, dsm: true, dtm: false },
+        assets: { orthophoto: true, dsm: true, dtm: false, shots: false },
         tiles: "",
       },
     });

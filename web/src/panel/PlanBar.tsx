@@ -1,5 +1,6 @@
 import type { SavedPlan } from "../api/types";
 import { selectDirty, selectRequest, useStore } from "../store";
+import { AfterFlight } from "./AfterFlight";
 
 const STATUS_LABEL: Record<SavedPlan["status"], string> = {
   planned: "planejado",
@@ -102,6 +103,8 @@ export function PlanBar() {
           {error}
         </p>
       )}
+
+      <AfterFlight />
     </section>
   );
 }

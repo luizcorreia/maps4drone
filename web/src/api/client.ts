@@ -5,6 +5,7 @@ import type {
   PlanRequest,
   PlanResult,
   SavedPlan,
+  Shot,
   TaskContext,
   WebodmProject,
   WebodmTask,
@@ -166,4 +167,26 @@ export async function linkPlanTask(
   const { body, headers } = json({ task: taskId });
   const path = plansRoute(projectId, `/${encodeURIComponent(planId)}/task`);
   return (await (await post(path, body, headers)).json()) as SavedPlan;
+}
+
+interface ShotsFile {
+  features?: {
+    geometry?: { type?: string; coordinates?: number[] };
+    properties?: { filename?: string } | null;
+  }[];
+}
+
+/** The photo positions WebODM kept for a processed task. */
+export async function fetchShots(
+  projectId: number | string,
+  taskId: string,
+  signal?: AbortSignal,
+): Promise<Shot[]> {
+  const path = `/api/projects/${String(projectId)}/tasks/${encodeURIComponent(taskId)}/download/shots.geojson`;
+  const file = (await (await request(path, { signal })).json()) as ShotsFile;
+  return (file.features ?? []).flatMap(({ geometry, properties }) => {
+    const [lng, lat] = geometry?.coordinates ?? [];
+    if (geometry?.type !== "Point" || lng === undefined || lat === undefined) return [];
+    return [{ position: [lng, lat] as [number, number], filename: properties?.filename ?? null }];
+  });
 }

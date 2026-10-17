@@ -44,6 +44,12 @@ ao plugin responde 404 de forma intermitente.
   **Apague** ou comece um **Novo**. O indicador mostra se há alterações não salvas, e o programa
   pergunta antes de descartá-las. Os planos são do projeto: quem pode ver o projeto os vê, e quem
   pode alterá-lo salva e apaga. O endereço guarda o projeto (`?project=<id>`) e a tarefa.
+- **Antes das fotos:** o mapa abre em satélite e tem **busca de endereço** (OpenStreetMap, só ao
+  confirmar a busca) e **Minha posição**, para chegar até a área. O terreno vem da elevação online.
+- **Depois do voo:** com a tarefa processada aberta, o plano aberto pode ser **vinculado a ela**
+  (vira "realizado" na lista; dá para desvincular), e **Mostrar onde as fotos foram tiradas** desenha
+  as posições reais (`shots.geojson` da tarefa) sobre o plano, com a contagem de fotos tiradas contra
+  as planejadas. Só aceita tarefas do mesmo projeto do plano.
 - Os quatro passos são os da [interface web](web.md). Em **Ajustes**, ao ligar "Acompanhar o
   terreno" e marcar a decolagem, escolha o **modelo de elevação**: DSM do projeto (padrão, já passa
   por cima de árvores e construções), DTM do projeto (só o chão) ou online. O DTM só existe se a

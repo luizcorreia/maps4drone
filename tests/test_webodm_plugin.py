@@ -87,11 +87,17 @@ def test_terrain_following_uses_the_tasks_dsm(logic, dsm):
     assert all(h > 0 for h in heights) or min(heights) > -50
 
 
+def test_task_info_says_whether_the_photo_positions_exist(logic):
+    info = logic.task_info("t", 1, "x", None, ["shots.geojson"])
+    assert info["assets"]["shots"] is True
+    assert info["extent"] is None
+
+
 def test_task_info_tells_the_page_what_it_can_use(logic):
     info = logic.task_info(
         "t1", 7, "Fazenda", [-51.9, -23.1, -51.8, -23.0], ["orthophoto.tif", "dsm.tif"]
     )
-    assert info["assets"] == {"orthophoto": True, "dsm": True, "dtm": False}
+    assert info["assets"] == {"orthophoto": True, "dsm": True, "dtm": False, "shots": False}
     assert info["tiles"] == "/api/projects/7/tasks/t1/orthophoto/tiles/{z}/{x}/{y}.png"
     assert info["extent"] == [-51.9, -23.1, -51.8, -23.0]
 

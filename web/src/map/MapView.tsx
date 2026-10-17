@@ -20,6 +20,7 @@ import {
   LocateOnStart,
   MapClicks,
   PlannedRoute,
+  ShotsLayer,
   TakeoffMarker,
 } from "./layers";
 
@@ -81,6 +82,7 @@ export function MapView() {
         <MapClicks />
         <DrawnShape />
         <PlannedRoute />
+        <ShotsLayer />
         <TakeoffMarker />
         <FitToTask />
         <FitToTarget />

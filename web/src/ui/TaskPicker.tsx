@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { fetchProjects, fetchProjectTasks } from "../api/client";
 import type { WebodmProject, WebodmTask } from "../api/types";
 import { useStore } from "../store";
+import { writeAddress } from "./address";
 
 const COMPLETED = 40;
 const MAP_ASSETS = ["orthophoto.tif", "dsm.tif", "dtm.tif"];
@@ -62,19 +63,6 @@ export function TaskPicker() {
     const bounds = tasks && !task ? unionBounds(tasks) : null;
     if (bounds && useStore.getState().points.length === 0) showBounds(bounds);
   }, [tasks, task, showBounds]);
-
-  /** Keeps the address in step with the choice, so a reload or a shared link comes back to it. */
-  const writeAddress = (project: number | null, taskId: string) => {
-    const url = new URL(window.location.href);
-    for (const [key, value] of [
-      ["project", project?.toString() ?? ""],
-      ["task", taskId],
-    ] as const) {
-      if (value) url.searchParams.set(key, value);
-      else url.searchParams.delete(key);
-    }
-    window.history.replaceState(null, "", url);
-  };
 
   const pick = (id: string) => {
     writeAddress(projectId, id);

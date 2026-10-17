@@ -5,7 +5,9 @@ import {
   exportMission,
   fetchDrones,
   fetchPlans,
+  fetchShots,
   fetchTask,
+  linkPlanTask,
   planMission,
   savePlan,
 } from "./api/client";
@@ -21,6 +23,7 @@ import type {
   PlanRequest,
   PlanResult,
   SavedPlan,
+  Shot,
   TaskContext,
 } from "./api/types";
 
@@ -82,6 +85,10 @@ interface State {
   savedSnapshot: string | null;
   plansError: string | null;
   plansBusy: boolean;
+  /** Where the open task's photos were really taken, once asked for. */
+  shots: Shot[] | null;
+  showShots: boolean;
+  shotsError: string | null;
 
   loadDrones: () => Promise<void>;
   loadTask: (id: string) => Promise<void>;
@@ -93,6 +100,8 @@ interface State {
   openPlan: (id: string) => void;
   newPlan: () => void;
   removePlan: (id: string) => Promise<void>;
+  linkPlanToTask: (taskId: string | null) => Promise<void>;
+  setShowShots: (show: boolean) => Promise<void>;
   setDemSource: (source: DemSource) => void;
   setMode: (mode: Mode) => void;
   setDrone: (id: string) => void;
@@ -230,6 +239,9 @@ export const useStore = create<State>()((set, get) => {
     savedSnapshot: null,
     plansError: null,
     plansBusy: false,
+    shots: null,
+    showShots: false,
+    shotsError: null,
 
     loadDrones: async () => {
       let drones: Drone[];
@@ -247,7 +259,13 @@ export const useStore = create<State>()((set, get) => {
     loadTask: async (id) => {
       try {
         const task = await fetchTask(id);
-        set({ task, demSource: defaultDemSource(task) });
+        set({
+          task,
+          demSource: defaultDemSource(task),
+          shots: null,
+          showShots: false,
+          shotsError: null,
+        });
         if (get().projectId !== Number(task.project)) await get().setProject(Number(task.project));
         replan();
       } catch (err) {
@@ -342,6 +360,32 @@ export const useStore = create<State>()((set, get) => {
       replan();
     },
 
+    linkPlanToTask: async (taskId) => {
+      const { projectId, planId } = get();
+      if (projectId === null || planId === null) return;
+      set({ plansBusy: true, plansError: null });
+      try {
+        const linked = await linkPlanTask(projectId, planId, taskId);
+        set({ plans: get().plans.map((p) => (p.id === linked.id ? linked : p)) });
+      } catch (err) {
+        set({ plansError: messageOf(err) });
+      } finally {
+        set({ plansBusy: false });
+      }
+    },
+
+    setShowShots: async (showShots) => {
+      const { task, shots } = get();
+      set({ showShots, shotsError: null });
+      if (!showShots || !task || shots) return;
+      try {
+        const loaded = await fetchShots(task.project, task.id);
+        if (get().task?.id === task.id) set({ shots: loaded });
+      } catch (err) {
+        if (get().task?.id === task.id) set({ shotsError: messageOf(err), showShots: false });
+      }
+    },
+
     removePlan: async (id) => {
       const { projectId } = get();
       if (projectId === null) return;
@@ -361,7 +405,7 @@ export const useStore = create<State>()((set, get) => {
     },
 
     clearTask: () => {
-      set({ task: null, demSource: "online" });
+      set({ task: null, demSource: "online", shots: null, showShots: false, shotsError: null });
       replan();
     },
 

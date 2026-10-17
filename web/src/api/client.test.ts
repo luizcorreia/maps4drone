@@ -1,6 +1,15 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { ApiError, exportMission, fetchDrones, fetchTask, importFile, planMission } from "./client";
+import {
+  ApiError,
+  exportMission,
+  fetchDrones,
+  fetchShots,
+  fetchTask,
+  importFile,
+  linkPlanTask,
+  planMission,
+} from "./client";
 import { toGeometry } from "./geometry";
 import { DEFAULT_PARAMS } from "../store";
 
@@ -141,5 +150,57 @@ describe("inside WebODM", () => {
       string
     >;
     expect(headers).not.toHaveProperty("X-CSRFToken");
+  });
+});
+
+describe("photo positions and plan links", () => {
+  it("reads a task's shots.geojson as positions, skipping anything that is not a point", async () => {
+    const fetchMock = stubFetch(
+      reply(
+        JSON.stringify({
+          type: "FeatureCollection",
+          features: [
+            {
+              geometry: { type: "Point", coordinates: [-44.9, -20.1, 800] },
+              properties: { filename: "A.JPG" },
+            },
+            { geometry: { type: "Point", coordinates: [-44.8, -20.2] }, properties: null },
+            {
+              geometry: {
+                type: "LineString",
+                coordinates: [
+                  [0, 0],
+                  [1, 1],
+                ],
+              },
+              properties: {},
+            },
+            { properties: {} },
+          ],
+        }),
+      ),
+    );
+    expect(await fetchShots(1, "t 1")).toEqual([
+      { position: [-44.9, -20.1], filename: "A.JPG" },
+      { position: [-44.8, -20.2], filename: null },
+    ]);
+    expect((fetchMock.mock.calls[0] as [string])[0]).toBe(
+      "/api/projects/1/tasks/t%201/download/shots.geojson",
+    );
+  });
+
+  it("ties a plan to a task, or unties it, through the plugin", async () => {
+    vi.stubEnv("VITE_API_BASE", "/api/plugins/maps4drone");
+    const fetchMock = vi
+      .fn()
+      .mockImplementation(() => Promise.resolve(reply(JSON.stringify({ id: "p1" }))));
+    vi.stubGlobal("fetch", fetchMock);
+    await linkPlanTask(4, "p1", "t1");
+    await linkPlanTask(4, "p1", null);
+    const calls = fetchMock.mock.calls as [string, RequestInit][];
+    expect(calls[0]?.[0]).toBe("/api/plugins/maps4drone/project/4/plans/p1/task");
+    expect(JSON.parse(calls[0]?.[1].body as string)).toEqual({ task: "t1" });
+    expect(JSON.parse(calls[1]?.[1].body as string)).toEqual({ task: null });
+    vi.unstubAllEnvs();
   });
 });

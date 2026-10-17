@@ -15,7 +15,7 @@ const TASK: TaskContext = {
   project: 1,
   name: "Rua Sergipe",
   extent: null,
-  assets: { orthophoto: true, dsm: true, dtm: false },
+  assets: { orthophoto: true, dsm: true, dtm: false, shots: false },
   tiles: "",
 };
 

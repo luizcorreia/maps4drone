@@ -79,7 +79,7 @@ describe("MapView", () => {
         project: 1,
         name: "Fazenda",
         extent: null,
-        assets: { orthophoto: true, dsm: true, dtm: false },
+        assets: { orthophoto: true, dsm: true, dtm: false, shots: false },
         tiles: "/api/projects/1/tasks/t/orthophoto/tiles/{z}/{x}/{y}.png",
       },
     });

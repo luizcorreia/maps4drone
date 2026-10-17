@@ -77,6 +77,7 @@ def task_info(
             "orthophoto": "orthophoto.tif" in available_assets,
             "dsm": "dsm.tif" in available_assets,
             "dtm": "dtm.tif" in available_assets,
+            "shots": "shots.geojson" in available_assets,
         },
         "tiles": (
             f"/api/projects/{project_id}/tasks/{task_id}/orthophoto/tiles/{{z}}/{{x}}/{{y}}.png"

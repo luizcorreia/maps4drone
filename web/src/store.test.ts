@@ -200,7 +200,7 @@ const TASK = {
   project: 3,
   name: "Fazenda",
   extent: [-51.9, -23.1, -51.8, -23.0] as [number, number, number, number],
-  assets: { orthophoto: true, dsm: true, dtm: false },
+  assets: { orthophoto: true, dsm: true, dtm: false, shots: false },
   tiles: "/api/projects/3/tasks/t1/orthophoto/tiles/{z}/{x}/{y}.png",
 };
 

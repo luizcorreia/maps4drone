@@ -8,8 +8,9 @@ requires-python = ">=3.9"
 dependencies = ["shapely>=2.0", "pyproj>=3.6"]
 
 [project.optional-dependencies]
-dev = ["pytest>=8", "ruff>=0.6", "mypy>=1.10", "httpx>=0.27"]
+dev = ["pytest>=8", "ruff>=0.6", "mypy>=1.10", "httpx>=0.27", "rasterio>=1.3"]
 web = ["fastapi>=0.110", "uvicorn>=0.29", "pillow>=10.1"]
+raster = ["rasterio>=1.3"]
 
 [project.scripts]
 maps4drone = "maps4drone.cli:main"
@@ -37,7 +38,7 @@ strict = true
 files = ["src"]
 
 [[tool.mypy.overrides]]
-module = ["shapely.*", "pyproj.*", "PIL.*"]
+module = ["shapely.*", "pyproj.*", "PIL.*", "rasterio.*"]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]

@@ -37,13 +37,23 @@ A interface tem quatro passos, e o mapa mostra tudo em tempo real:
    da área). "Acompanhar o terreno" pede o ponto de decolagem no mapa; a elevação vem do
    Open-Meteo (precisa de internet e tem limite de consultas, por isso as consultas são
    guardadas em cache). "Avançado" tem câmera, gimbal, margem e amostragem do terreno.
-4. **Revisar:** resumo, avisos e o download. Atom 2: `.zip` com `global.json`, `<id>.json` e
-   um `README.txt` (siga [atom2-format.md](atom2-format.md) para a missão dummy). DJI: `.kmz`.
+4. **Revisar:** resumo, avisos e o download. Atom 2: `.zip` com `global.json`, `<id>.json`, a
+   miniatura `task_<n>.jpg` e um `README.txt` (siga [atom2-format.md](atom2-format.md) para a missão dummy). DJI: `.kmz`.
 
 Sobre o mapa ficam o card **Dados do voo** (GSD, espaçamento, fotos, armazenamento, velocidade
 máxima sem borrar, distância, duração e baterias), a legenda e, com terreno, o **perfil de
 elevação**. Em Órbita, a "Altura do voo" é a altura sobre o solo; em Fachada, o gimbal fica
 horizontal e a câmera fotografa em cada waypoint.
+
+## Miniatura da missão
+
+O app do Atom 2 desenha uma miniatura (`task_<n>.jpg`, 2316×1080) quando cria a missão e a mostra
+na lista; substituir os JSON não a atualiza, então a lista mostra a rota da missão dummy. O
+export gera uma imagem equivalente: mapa claro, rota em verde com setas, pinos numerados e a
+altura em cada pino. Ao copiar para o celular, substitua também o `.jpg` da pasta da dummy,
+mantendo o nome dele. O mapa de fundo vem do OpenStreetMap (algumas dezenas de tiles por
+exportação, com cache); sem internet a miniatura sai com fundo liso. Se o Pillow faltar, o export
+continua e só omite o `.jpg`.
 
 ## Drones DJI
 

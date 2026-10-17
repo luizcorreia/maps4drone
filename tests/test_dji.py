@@ -10,7 +10,7 @@ from maps4drone import dji
 from maps4drone.camera import load_drones
 from maps4drone.model import Mission, Waypoint
 from maps4drone.planners.survey import SurveyParams, plan_survey
-from maps4drone.web.app import app, get_elevation
+from maps4drone.web.app import app, get_elevation, get_tiles
 
 WPML = "{http://www.dji.com/wpmz/1.0.6}"
 DJI_IDS = ["litox1", "mini4pro", "mini3pro", "mini3", "mini5pro", "mavic3e", "air3s"]
@@ -96,6 +96,7 @@ def test_atom2_drone_is_refused(drones, square):
 @pytest.fixture
 def client():
     app.dependency_overrides[get_elevation] = lambda: lambda pts: [0.0] * len(pts)
+    app.dependency_overrides[get_tiles] = lambda: lambda z, x, y: None
     yield TestClient(app)
     app.dependency_overrides.clear()
 

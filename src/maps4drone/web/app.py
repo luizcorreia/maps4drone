@@ -18,7 +18,7 @@ from shapely.errors import ShapelyError
 from shapely.geometry import MultiPolygon, Polygon, mapping, shape
 from shapely.geometry.base import BaseGeometry
 
-from .. import atom2, dji
+from .. import atom2, dji, thumbnail
 from ..camera import Drone, load_drones
 from ..elevation import Elevation, open_meteo_elevation
 from ..io import read_area, read_line
@@ -43,6 +43,8 @@ O app Potensic Eve so reconhece missoes que ele mesmo criou. Para usar estes arq
 2. No celular, abra Android/data/com.ipotensic.atom/files/Waypoint/<id>/
 3. Substitua global.json e <id>.json dessa pasta por estes dois arquivos,
    RENOMEANDO o arquivo de waypoints para o mesmo nome do arquivo original.
+   Se houver task_*.jpg (a miniatura mostrada na lista de missoes), substitua
+   tambem o .jpg da pasta por ele, mantendo o nome do original.
 4. Abra a missao no app, confira a rota, configure o temporizador de fotos
    para o intervalo indicado no planejamento e voe com seguranca.
 """
@@ -90,6 +92,10 @@ async def _value_error(_: Request, exc: ValueError) -> JSONResponse:
 
 def get_elevation() -> Elevation:
     return open_meteo_elevation()
+
+
+def get_tiles() -> thumbnail.TileFetcher:
+    return thumbnail.osm_tiles()
 
 
 def _geometry(req: PlanRequest) -> BaseGeometry:
@@ -269,8 +275,20 @@ def _dji_download(mission: Mission, stamp: int) -> Response:
     return _download(buf.getvalue(), "application/zip", f"maps4drone-{stamp}-voos.zip")
 
 
+def _thumbnail(mission: Mission, tiles: thumbnail.TileFetcher) -> bytes | None:
+    """The mission preview, or None when it cannot be drawn: it is only a nicety."""
+    try:
+        return thumbnail.render_thumbnail(mission.waypoints, tiles)
+    except (ImportError, ValueError, OSError):
+        return None
+
+
 @app.post("/api/export")
-def export(req: PlanRequest, elevation: Annotated[Elevation, Depends(get_elevation)]) -> Response:
+def export(
+    req: PlanRequest,
+    elevation: Annotated[Elevation, Depends(get_elevation)],
+    tiles: Annotated[thumbnail.TileFetcher, Depends(get_tiles)],
+) -> Response:
     mission = _plan_or_raise(req, elevation)
     mission_id = int(time.time() * 1000)
     if mission.drone.export_format == "dji":
@@ -280,6 +298,8 @@ def export(req: PlanRequest, elevation: Annotated[Elevation, Depends(get_elevati
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
         z.writestr("global.json", global_json)
         z.writestr(f"{mission_id}.json", body)
+        if (preview := _thumbnail(mission, tiles)) is not None:
+            z.writestr(f"task_{mission_id - 32}.jpg", preview)
         z.writestr("README.txt", EXPORT_README)
     return _download(buf.getvalue(), "application/zip", f"maps4drone-{mission_id}.zip")
 

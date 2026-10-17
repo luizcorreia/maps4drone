@@ -13,7 +13,7 @@ timestamp Unix em milissegundos:
 <id>/
 ├── global.json      configurações da missão
 ├── <id>.json        waypoints
-└── *.jpg            miniaturas (opcionais, só visuais)
+└── task_<n>.jpg     miniatura da lista de missões (só visual; `<n>` poucos ms antes de `<id>`)
 ```
 
 O app mantém um índice próprio das missões. Uma pasta colocada de fora é apagada ao abrir

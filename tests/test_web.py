@@ -7,7 +7,7 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from maps4drone.web.app import app, get_elevation, mount_ui
+from maps4drone.web.app import app, get_elevation, get_tiles, mount_ui
 
 FIXTURE = Path(__file__).parent / "fixtures" / "atom2_sample_mission.json"
 AREA = {
@@ -42,6 +42,7 @@ def client():
         return [700 + 0.01 * i for i, _ in enumerate(points)]
 
     app.dependency_overrides[get_elevation] = lambda: fake
+    app.dependency_overrides[get_tiles] = lambda: lambda z, x, y: None
     c = TestClient(app)
     c.elevation_calls = calls  # type: ignore[attr-defined]
     yield c
@@ -212,3 +213,28 @@ def test_elevation_rate_limit_is_reported_in_portuguese(client):
     r = post(client, "grid", AREA, terrain=True, takeoff=[-51.9, -23.15])
     assert r.status_code == 502
     assert "limitou as consultas" in r.json()["detail"]
+
+
+def test_export_zip_carries_a_thumbnail_named_like_the_apps(client):
+    import re
+
+    r = client.post("/api/export", json={"mode": "grid", "geometry": AREA, "params": {}})
+    with zipfile.ZipFile(io.BytesIO(r.content)) as z:
+        names = z.namelist()
+        mission_id = next(int(n[:-5]) for n in names if re.fullmatch(r"\d+\.json", n))
+        assert f"task_{mission_id - 32}.jpg" in names
+        assert z.read(f"task_{mission_id - 32}.jpg")[:3] == b"\xff\xd8\xff"
+    assert "task_*.jpg" in zipfile.ZipFile(io.BytesIO(r.content)).read("README.txt").decode()
+
+
+def test_export_survives_a_thumbnail_failure(client, monkeypatch):
+    from maps4drone import thumbnail
+
+    def broken(*_args, **_kwargs):
+        raise ImportError("no pillow")
+
+    monkeypatch.setattr(thumbnail, "render_thumbnail", broken)
+    r = client.post("/api/export", json={"mode": "grid", "geometry": AREA, "params": {}})
+    assert r.status_code == 200
+    with zipfile.ZipFile(io.BytesIO(r.content)) as z:
+        assert not any(n.endswith(".jpg") for n in z.namelist())

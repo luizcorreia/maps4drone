@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any
 
 from qgis.core import (
+    NULL,
     Qgis,
     QgsCoordinateReferenceSystem,
     QgsCoordinateTransform,
@@ -92,7 +93,7 @@ def _fields(spec: list[tuple[str, str]]) -> QgsFields:
 def _number(
     name: str,
     label: str,
-    default: float,
+    default: float | None,
     low: float | None = None,
     high: float | None = None,
     integer: bool = False,
@@ -119,6 +120,13 @@ class _Base(QgsProcessingAlgorithm):
 
     def createInstance(self) -> "_Base":  # noqa: N802
         return type(self)()
+
+    def flags(self) -> Any:
+        # pyproj creating CRS objects on a Processing worker thread crashes QGIS 4 (SIGSEGV
+        # in libproj), so run on the main thread.
+        scoped = getattr(Qgis, "ProcessingAlgorithmFlag", None)
+        flag = scoped.NoThreading if scoped else QgsProcessingAlgorithm.FlagNoThreading
+        return super().flags() | flag
 
     def group(self) -> str:
         return self.tr("Mapping")
@@ -344,11 +352,23 @@ class SurveyGridAlgorithm(_Base):
         self._drone_params()
         self._survey_params()
         self.addParameter(
-            _number("ANGLE", self.tr("Flight line bearing (deg, 0 = north)"), 0, 0, 360)
+            _number(
+                "ANGLE",
+                self.tr("Flight line bearing (deg, 0 = north; blank = long axis)"),
+                None,
+                0,
+                360,
+                optional=True,
+            )
         )
         self.addParameter(QgsProcessingParameterBoolean("DOUBLE", self.tr("Double grid"), False))
         self.addParameter(_number("MARGIN", self.tr("Grow area by (m)"), 0, 0, 500))
         self._output_params()
+
+    def _heading(self, parameters: dict, context: Any) -> float | None:
+        if parameters.get("ANGLE") in (None, NULL, ""):
+            return None
+        return self.parameterAsDouble(parameters, "ANGLE", context)
 
     def processAlgorithm(self, parameters: dict, context: Any, feedback: Any) -> dict:  # noqa: N802
         drone, camera = self._drone(parameters, context)
@@ -359,7 +379,7 @@ class SurveyGridAlgorithm(_Base):
         params = self._survey_params_value(
             parameters,
             context,
-            heading_deg=self.parameterAsDouble(parameters, "ANGLE", context),
+            heading_deg=self._heading(parameters, context),
             double=self.parameterAsBoolean(parameters, "DOUBLE", context),
             margin_m=self.parameterAsDouble(parameters, "MARGIN", context),
         )

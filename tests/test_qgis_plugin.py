@@ -440,3 +440,10 @@ def test_plugin_gui_lifecycle_and_missing_deps_message(qgis_env, monkeypatch):
     broken.run()
     assert shown == ["Could not import 'shapely'"]
     broken.unload()
+
+
+def test_algorithms_run_on_the_main_thread(qgis_env):
+    from qgis.core import Qgis, QgsApplication
+
+    for alg in QgsApplication.processingRegistry().providerById("maps4drone").algorithms():
+        assert alg.flags() & Qgis.ProcessingAlgorithmFlag.NoThreading

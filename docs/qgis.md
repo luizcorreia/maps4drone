@@ -5,7 +5,7 @@ O plugin é uma camada fina sobre o núcleo Python: expõe quatro algoritmos do 
 
 | Algoritmo | Entrada |
 |---|---|
-| `maps4drone:survey_grid` | camada de polígonos (aceita "somente feições selecionadas"); ângulo, sobreposições, intervalo, grid duplo, margem |
+| `maps4drone:survey_grid` | camada de polígonos (aceita "somente feições selecionadas"); ângulo (em branco = ao longo do eixo maior da área (retângulo mínimo rotacionado)), sobreposições, intervalo, grid duplo, margem |
 | `maps4drone:corridor` | camada de linhas; número ímpar de passadas |
 | `maps4drone:orbit` | ponto central, raio, altura, nº de pontos |
 | `maps4drone:facade` (experimental) | pontos A e B da base da parede, altura, distância |

@@ -24,7 +24,11 @@ def _survey_args(p: argparse.ArgumentParser) -> None:
     p.add_argument("--altitude", type=float, default=100, help="height above ground, m")
     p.add_argument("--front", type=float, default=80, help="front overlap, %%")
     p.add_argument("--side", type=float, default=70, help="side overlap, %%")
-    p.add_argument("--angle", type=float, default=0, help="flight line bearing, 0 = north")
+    p.add_argument(
+        "--angle",
+        type=float,
+        help="flight line bearing, 0 = north (default: along the long axis of the area)",
+    )
     p.add_argument("--interval", type=float, default=3, help="camera shooting interval, s")
     p.add_argument("--pitch", type=float, default=-90, help="gimbal pitch, degrees")
     p.add_argument("--terrain", action="store_true", help="follow terrain (needs --takeoff)")

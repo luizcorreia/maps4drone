@@ -1,9 +1,12 @@
 import math
 
 import pytest
+from shapely import affinity
+from shapely.geometry import Polygon
 
 from maps4drone.geo import Projector
-from maps4drone.planners.survey import SurveyParams, plan_survey
+from maps4drone.planners.common import EmptyRouteError
+from maps4drone.planners.survey import SurveyParams, long_axis_bearing, plan_survey
 from maps4drone.stats import estimate
 
 
@@ -44,8 +47,8 @@ def test_all_waypoints_stay_inside_area(atom2, square):
 
 
 def test_double_grid_has_two_perpendicular_passes(atom2, square):
-    single = plan_survey(square, atom2, atom2.camera(), SurveyParams())
-    double = plan_survey(square, atom2, atom2.camera(), SurveyParams(double=True))
+    single = plan_survey(square, atom2, atom2.camera(), SurveyParams(heading_deg=0))
+    double = plan_survey(square, atom2, atom2.camera(), SurveyParams(heading_deg=0, double=True))
     assert len(double.waypoints) > len(single.waypoints)
     pts = _xy(double)[len(single.waypoints) :]
     for (_, y0), (_, y1) in zip(pts[::2], pts[1::2], strict=True):
@@ -119,3 +122,29 @@ def test_terrain_warning_uses_agl_not_takeoff_relative_height(atom2, square):
     hill = lambda pts: [800.0 + 0.1 * i for i, _ in enumerate(pts)]  # noqa: E731
     m = plan_survey(square, atom2, atom2.camera(), SurveyParams(), hill, (-51.9, -23.15))
     assert not any("legal limit" in w for w in m.warnings)
+
+
+def test_long_axis_bearing():
+    wide = affinity.rotate(Polygon([(0, 0), (200, 0), (200, 50), (0, 50)]), -30, origin=(0, 0))
+    assert long_axis_bearing(wide) == pytest.approx(120, abs=1e-6)
+    tall = Polygon([(0, 0), (50, 0), (50, 200), (0, 200)])
+    assert long_axis_bearing(tall) == pytest.approx(0, abs=1e-6)
+
+
+def test_default_heading_follows_long_axis(atom2):
+    long_area = Polygon([(-46.0, -23.0), (-46.0, -22.998), (-45.9995, -22.998), (-45.9995, -23.0)])
+    pts = _xy(plan_survey(long_area, atom2, atom2.camera(), SurveyParams()))
+    for (x0, _), (x1, _) in zip(pts[::2], pts[1::2], strict=True):
+        assert x0 == pytest.approx(x1, abs=5)  # roughly north-south, along the long side
+
+
+def test_long_axis_ignores_a_long_diagonal_edge():
+    # wide rectangle with one corner clipped by a diagonal longer than the short sides
+    poly = Polygon([(0, 0), (200, 0), (200, 40), (160, 60), (0, 60)])
+    assert long_axis_bearing(poly) == pytest.approx(90, abs=1e-6)
+
+
+def test_area_smaller_than_the_line_spacing_is_an_error(atom2):
+    tiny = Polygon([(-46.0, -23.0), (-46.0, -22.99995), (-45.99995, -22.99995), (-45.99995, -23.0)])
+    with pytest.raises(EmptyRouteError, match="line spacing"):
+        plan_survey(tiny, atom2, atom2.camera(), SurveyParams(altitude_m=100))

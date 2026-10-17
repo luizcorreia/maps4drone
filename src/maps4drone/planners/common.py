@@ -9,6 +9,10 @@ from ..terrain import follow_terrain
 MIN_HEIGHT_M = 5.0
 
 
+class EmptyRouteError(ValueError):
+    """No flight line fits the area (it is smaller than the line spacing)."""
+
+
 def shoot_interval(drone: Drone, requested: float) -> float:
     if requested not in drone.shoot_intervals_s:
         raise ValueError(f"{drone.name}: interval must be one of {list(drone.shoot_intervals_s)} s")

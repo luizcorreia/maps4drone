@@ -1,0 +1,16 @@
+{
+  "name": "maps4drone",
+  "primary": "#e6edf3",
+  "secondary": "#0d1117",
+  "tertiary": "#58a6ff",
+  "button_primary": "#58a6ff",
+  "button_default": "#30363d",
+  "button_danger": "#f85149",
+  "header_background": "#161b22",
+  "header_primary": "#e6edf3",
+  "border": "#30363d",
+  "highlight": "#161b22",
+  "dialog_warning": "#e3b341",
+  "failed": "#3d1618",
+  "success": "#0f2d1a"
+}

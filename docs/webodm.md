@@ -85,6 +85,23 @@ A permissão é a do próprio WebODM: quem não pode ver o projeto não planeja 
   API em `/api/plugins/maps4drone`). Dentro do WebODM ela envia o token CSRF do Django.
 - O núcleo roda em Python 3.9 e com pydantic 1.x; o CI testa essa combinação (`webodm-compat`).
 
+## Tema do WebODM com as cores do maps4drone
+
+O WebODM aceita temas (Administração > Tema). `webodm_theme/` traz um, com a mesma paleta escura
+do planejador (fundo `#0d1117`, painéis `#161b22`, bordas `#30363d`, destaque `#58a6ff`): as cores em
+`maps4drone.json` e os acertos que o WebODM deixa de fora (campos, tabelas, painéis, botões com texto
+escuro sobre o azul e os ícones dos controles do mapa) em `maps4drone.css`.
+
+```sh
+WEBODM_PASSWORD=... python scripts/install_webodm_theme.py --url http://localhost:8000 --user admin
+python scripts/install_webodm_theme.py ... --activate                # criar ou atualizar e ativar
+python scripts/install_webodm_theme.py ... --activate-theme Default  # voltar ao tema original
+```
+
+O script cria o tema "maps4drone" (ou o atualiza, se já existir) pelo formulário do admin e pode
+ativá-lo; o tema vale para todos os usuários do WebODM. Dá para fazer à mão também: copie as
+cores e o CSS em Administração > Tema e escolha o tema em Configurações.
+
 ## O que ainda não foi validado
 
 - `plugin.py` e `views.py` dependem de Django 2.2, DRF e `app.plugins`; os testes não os

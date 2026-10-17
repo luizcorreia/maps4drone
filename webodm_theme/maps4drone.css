@@ -1,0 +1,202 @@
+/* maps4drone look for WebODM: the same palette as the planner (web/src/styles.css).
+   WebODM's theme colours cover text, backgrounds, links and buttons; this fills in the
+   Bootstrap pieces it leaves white. */
+:root {
+  --m4d-bg: #0d1117;
+  --m4d-surface: #161b22;
+  --m4d-surface-2: #21262d;
+  --m4d-border: #30363d;
+  --m4d-text: #e6edf3;
+  --m4d-muted: #8b949e;
+  --m4d-accent: #58a6ff;
+  --m4d-ok: #3fb950;
+  --m4d-warn: #e3b341;
+  --m4d-danger: #f85149;
+}
+
+html,
+body {
+  background: var(--m4d-bg);
+  color: var(--m4d-text);
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+#navbar-top {
+  border-bottom: 1px solid var(--m4d-border);
+}
+
+.navbar-default,
+.sidebar,
+#page-wrapper,
+footer {
+  background: var(--m4d-bg);
+}
+
+.sidebar ul li a,
+.navbar-default .navbar-link,
+.navbar-text {
+  color: var(--m4d-text);
+}
+
+.sidebar ul li a:hover,
+.sidebar ul li a.active {
+  background: var(--m4d-surface-2);
+  color: var(--m4d-accent);
+}
+
+/* panels, lists and tables */
+.panel,
+.panel-default,
+.well,
+.list-group-item,
+.modal-content,
+.popover,
+.project-list-item,
+.table,
+.table-striped > tbody > tr:nth-of-type(odd) {
+  background: var(--m4d-surface);
+  color: var(--m4d-text);
+  border-color: var(--m4d-border);
+}
+
+.panel-default > .panel-heading {
+  background: var(--m4d-surface-2);
+  color: var(--m4d-text);
+  border-color: var(--m4d-border);
+}
+
+.table > thead > tr > th,
+.table > tbody > tr > th,
+.table > tbody > tr > td,
+.table > tfoot > tr > td,
+hr {
+  border-color: var(--m4d-border);
+}
+
+.task-list-item,
+.task-list-item:nth-child(odd) {
+  background: var(--m4d-surface);
+}
+
+/* forms */
+.form-control,
+input,
+select,
+textarea,
+.input-group-addon {
+  background: var(--m4d-surface-2);
+  color: var(--m4d-text);
+  border-color: var(--m4d-border);
+}
+
+.form-control:focus {
+  border-color: var(--m4d-accent);
+  box-shadow: 0 0 0 1px var(--m4d-accent);
+}
+
+.dropdown-menu > li > a:hover,
+.dropdown-menu > li > a:focus {
+  background: var(--m4d-surface-2);
+  color: var(--m4d-accent);
+}
+
+/* buttons: the accent and danger colours are light, so their text is dark, as in the planner */
+.btn {
+  border-radius: 6px;
+  font-weight: 600;
+}
+
+.btn-primary,
+.btn-primary:hover,
+.btn-primary:focus,
+.btn-primary:active,
+.btn-danger,
+.btn-danger:hover,
+.btn-danger:focus,
+.btn-danger:active {
+  color: var(--m4d-bg);
+}
+
+.btn-default,
+.btn-secondary {
+  color: var(--m4d-text);
+}
+
+/* misc */
+a,
+a:hover,
+a:focus {
+  color: var(--m4d-accent);
+}
+
+.text-muted {
+  color: var(--m4d-muted);
+}
+
+code,
+pre,
+.console {
+  background: var(--m4d-surface-2);
+  color: var(--m4d-text);
+  border-color: var(--m4d-border);
+}
+
+.progress {
+  background: var(--m4d-surface-2);
+}
+
+.label-default,
+.badge {
+  background: var(--m4d-surface-2);
+  color: var(--m4d-text);
+}
+
+.nav-tabs {
+  border-color: var(--m4d-border);
+}
+
+.nav-tabs > li.active > a,
+.nav-tabs > li.active > a:hover {
+  background: var(--m4d-surface);
+  color: var(--m4d-accent);
+  border-color: var(--m4d-border);
+}
+
+/* map controls: some plugins colour their icons dark, which vanishes on the dark buttons */
+.leaflet-bar a,
+.leaflet-bar a *,
+.leaflet-control > a,
+.leaflet-control > a *,
+.leaflet-control-layers-toggle,
+.leaflet-control .fa,
+.leaflet-control .fas,
+.leaflet-control .far {
+  color: var(--m4d-text) !important;
+}
+
+.leaflet-control-layers,
+.leaflet-control-layers-expanded,
+.leaflet-popup-content-wrapper,
+.leaflet-popup-tip {
+  background: var(--m4d-surface) !important;
+  color: var(--m4d-text) !important;
+}
+
+/* ...and the controls drawn with a dark SVG background image: flip the button, whose background
+   colour is set to the opposite of the dark one it should end up as (#0d1117) */
+a.leaflet-control-layers-control-button,
+a.leaflet-control-layers-toggle,
+a.leaflet-control-add-overlay-button,
+a.leaflet-control-contours-button,
+a.leaflet-control-measure-toggle,
+a.leaflet-control-objdetect-button,
+a.leaflet-control-fullscreen-button {
+  background-color: #f2eee8 !important;
+  filter: invert(1) hue-rotate(180deg);
+}
+
+span.close-button,
+span.leaflet-control-autolayers-close,
+span.leaflet-control-measure-close-button {
+  filter: invert(1);
+}

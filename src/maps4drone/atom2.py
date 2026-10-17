@@ -9,6 +9,8 @@ deleted on launch. The workaround is to create a dummy mission in the app and ov
 its two files, keeping the names. `replace_mission` does exactly that.
 """
 
+from __future__ import annotations
+
 import json
 import re
 import time

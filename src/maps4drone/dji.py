@@ -9,6 +9,8 @@ DJI Fly caps the waypoints per mission, so long routes are split into several KM
 that share one waypoint at the seam.
 """
 
+from __future__ import annotations
+
 import dataclasses
 import io
 import math
@@ -34,7 +36,7 @@ def photo_waypoints(mission: Mission) -> list[Waypoint]:
     proj = Projector(wps[0].lng, wps[0].lat)
     xy = [proj.forward(w.lng, w.lat) for w in wps]
     out: list[Waypoint] = []
-    for i, (a, b) in enumerate(zip(wps, wps[1:], strict=False)):
+    for i, (a, b) in enumerate(zip(wps, wps[1:])):
         n = max(1, math.ceil(math.dist(xy[i], xy[i + 1]) / shot))
         for k in range(n):
             t = k / n

@@ -8,7 +8,7 @@ import urllib.error
 import zipfile
 from dataclasses import asdict
 from pathlib import Path
-from typing import Annotated, Any, Literal
+from typing import Annotated, Any, Literal, Optional
 
 from fastapi import Depends, FastAPI, HTTPException, Request, Response
 from fastapi.responses import HTMLResponse, JSONResponse
@@ -52,11 +52,11 @@ O app Potensic Eve so reconhece missoes que ele mesmo criou. Para usar estes arq
 
 class Params(BaseModel):
     drone: str = "atom2"
-    camera: str | None = None
+    camera: Optional[str] = None
     altitude: float = Field(default=100, gt=0, le=500, description="height (m); orbit height too")
     front: float = Field(default=80, ge=0, lt=100, description="front overlap, %")
     side: float = Field(default=70, ge=0, lt=100, description="side overlap, %")
-    angle: float | None = Field(
+    angle: Optional[float] = Field(
         default=None, ge=0, lt=360, description="line bearing, 0 = north; null = long axis"
     )
     interval: float = 3
@@ -64,7 +64,7 @@ class Params(BaseModel):
     margin: float = Field(default=0, ge=0, le=200)
     speed: float = Field(default=5, gt=0, description="m/s for waypoints, orbit and facade")
     terrain: bool = False
-    takeoff: tuple[float, float] | None = Field(default=None, description="[lng, lat]")
+    takeoff: Optional[tuple[float, float]] = Field(default=None, description="[lng, lat]")
     terrain_step: float = Field(default=30, ge=5, le=200)
     lines: int = Field(default=3, ge=1, le=15)
     radius: float = Field(default=40, gt=0, le=1000)
@@ -78,7 +78,7 @@ class Params(BaseModel):
 
 class PlanRequest(BaseModel):
     mode: Mode
-    geometry: dict[str, Any] | None = None
+    geometry: Optional[dict[str, Any]] = None
     params: Params = Field(default_factory=Params)
 
 
@@ -115,7 +115,7 @@ def _lines(geom: BaseGeometry, minimum: int) -> list[tuple[float, float]]:
 
 
 def _waypoint_mission(
-    drone: Drone, geom: BaseGeometry, p: Params, elevation: Elevation | None
+    drone: Drone, geom: BaseGeometry, p: Params, elevation: Optional[Elevation]
 ) -> Mission:
     if geom.geom_type == "MultiPoint":
         pts = [(g.x, g.y) for g in geom.geoms]
@@ -151,7 +151,7 @@ def build_mission(req: PlanRequest, elevation: Elevation) -> Mission:
         terrain_step_m=p.terrain_step,
     )
     if req.mode in ("grid", "double_grid"):
-        if not isinstance(geom, Polygon | MultiPolygon):
+        if not isinstance(geom, (Polygon, MultiPolygon)):
             raise ValueError("a area precisa ser um poligono")
         if not geom.is_valid:
             raise ValueError("poligono invalido: as linhas se cruzam")
@@ -226,7 +226,7 @@ def drones() -> list[dict[str, Any]]:
 
 
 @app.get("/api/camera")
-def camera_info(drone: str, altitude: float, camera: str | None = None) -> dict[str, float]:
+def camera_info(drone: str, altitude: float, camera: Optional[str] = None) -> dict[str, float]:
     if drone not in DRONES:
         raise ValueError(f"drone desconhecido: {drone}")
     cam = DRONES[drone].camera(camera)
@@ -275,7 +275,7 @@ def _dji_download(mission: Mission, stamp: int) -> Response:
     return _download(buf.getvalue(), "application/zip", f"maps4drone-{stamp}-voos.zip")
 
 
-def _thumbnail(mission: Mission, tiles: thumbnail.TileFetcher) -> bytes | None:
+def _thumbnail(mission: Mission, tiles: thumbnail.TileFetcher) -> Optional[bytes]:
     """The mission preview, or None when it cannot be drawn: it is only a nicety."""
     try:
         return thumbnail.render_thumbnail(mission.waypoints, tiles)

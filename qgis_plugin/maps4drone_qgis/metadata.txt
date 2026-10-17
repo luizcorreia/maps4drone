@@ -7,7 +7,7 @@ description=Survey and mapping waypoint missions for drones (Potensic Atom 2 fir
 version=0.1.0
 author=Luiz Correia
 email=luiz@luizcorreia.eti.br
-about=Processing algorithms that plan survey grids, double grids, corridors, orbits and facades for drones, with terrain following from a DEM raster, and write the mission files for the Potensic Atom 2 (Potensic Eve app). Output layers with the flight line and waypoints are created for review. Requires Python 3.10+ and the shapely>=2 and pyproj packages. Always test new plans in a small open area and follow local aviation rules.
+about=Processing algorithms that plan survey grids, double grids, corridors, orbits and facades for drones, with terrain following from a DEM raster, and write the mission files for the Potensic Atom 2 (Potensic Eve app). Output layers with the flight line and waypoints are created for review. Requires Python 3.9+ and the shapely>=2 and pyproj packages. Always test new plans in a small open area and follow local aviation rules.
 tracker=https://github.com/luizcorreia/maps4drone/issues
 repository=https://github.com/luizcorreia/maps4drone
 tags=drone,uav,photogrammetry,flight plan,waypoints,mapping,survey

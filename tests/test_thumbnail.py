@@ -20,7 +20,7 @@ def decode(data: bytes) -> Image.Image:
 
 
 def near(a: tuple[int, ...], b: tuple[int, ...], tol: int = 20) -> bool:
-    return all(abs(x - y) <= tol for x, y in zip(a, b, strict=True))
+    return all(abs(x - y) <= tol for x, y in zip(a, b))
 
 
 def test_matches_the_size_and_format_of_the_apps_thumbnails():
@@ -33,7 +33,7 @@ def test_route_is_centred_and_fits_the_picture():
     view = fit_view([(w.lng, w.lat) for w in ROUTE])
     pts = [view.project(w.lng, w.lat) for w in ROUTE]
     assert all(0 < x < WIDTH and 0 < y < HEIGHT for x, y in pts)
-    xs, ys = zip(*pts, strict=True)
+    xs, ys = zip(*pts)
     assert (min(xs) + max(xs)) / 2 == pytest.approx(WIDTH / 2, abs=1)
     assert (min(ys) + max(ys)) / 2 == pytest.approx(HEIGHT / 2, abs=1)
 

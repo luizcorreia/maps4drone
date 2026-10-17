@@ -1,5 +1,7 @@
 """Processing algorithms. Thin wrappers: read QGIS inputs, call the core, emit QGIS outputs."""
 
+from __future__ import annotations
+
 import math
 from pathlib import Path
 from typing import Any
@@ -118,7 +120,7 @@ class _Base(QgsProcessingAlgorithm):
     def tr(self, text: str) -> str:
         return QCoreApplication.translate("maps4drone", text)
 
-    def createInstance(self) -> "_Base":  # noqa: N802
+    def createInstance(self) -> _Base:  # noqa: N802
         return type(self)()
 
     def flags(self) -> Any:
@@ -269,7 +271,7 @@ class _Base(QgsProcessingAlgorithm):
         )
         route.setAttributes(list(route_row(mission, stats)))
         line_sink.addFeature(route)
-        for row, (x, y) in zip(waypoint_rows(mission), route_coords(mission), strict=True):
+        for row, (x, y) in zip(waypoint_rows(mission), route_coords(mission)):
             feature = QgsFeature(point_fields)
             feature.setGeometry(QgsGeometry.fromPointXY(QgsPointXY(x, y)))
             feature.setAttributes(list(row))

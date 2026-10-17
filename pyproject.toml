@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "Open source survey/mapping waypoint generator for drones (Potensic Atom 2 first)"
 readme = "README.md"
 license = "MIT"
-requires-python = ">=3.10"
+requires-python = ">=3.9"
 dependencies = ["shapely>=2.0", "pyproj>=3.6"]
 
 [project.optional-dependencies]
@@ -26,6 +26,7 @@ artifacts = ["src/maps4drone/web/static"]
 
 [tool.ruff]
 line-length = 100
+target-version = "py39"
 src = ["src", "tests"]
 
 [tool.ruff.lint]

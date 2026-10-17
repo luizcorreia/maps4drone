@@ -195,8 +195,8 @@ def test_ensure_core_ok_here():
 def test_ensure_core_old_python(monkeypatch):
     from maps4drone_qgis import _deps
 
-    monkeypatch.setattr(_deps.sys, "version_info", (3, 9, 0))
-    assert "3.10" in _deps.ensure_core()
+    monkeypatch.setattr(_deps.sys, "version_info", (3, 8, 0))
+    assert "3.9" in _deps.ensure_core()
 
 
 @pytest.fixture(scope="module")

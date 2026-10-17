@@ -7,12 +7,15 @@ height tag on each pin. Needs Pillow; the map tiles (OpenStreetMap, a few dozen 
 faded to a pale look) are optional and fetched best-effort.
 """
 
+from __future__ import annotations
+
 import io
 import math
 import urllib.request
 from collections.abc import Callable, Sequence
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
+from typing import Optional, Union
 
 from PIL import Image, ImageDraw, ImageEnhance, ImageFont
 
@@ -36,8 +39,9 @@ PIN = (0, 230, 118)
 PIN_LAST = (0, 150, 70)
 TAG = (95, 95, 95, 235)
 
-TileFetcher = Callable[[int, int, int], bytes | None]
-Font = ImageFont.FreeTypeFont | ImageFont.ImageFont
+# aliases are evaluated at import time, so no `|` here: Python 3.9 has none for types
+TileFetcher = Callable[[int, int, int], Optional[bytes]]
+Font = Union[ImageFont.FreeTypeFont, ImageFont.ImageFont]
 
 _OSM = "https://tile.openstreetmap.org/{z}/{x}/{y}.png"
 _ATTRIBUTION = "© OpenStreetMap contributors"
@@ -92,14 +96,14 @@ def fit_view(points: Sequence[tuple[float, float]]) -> View:
     """The most zoomed-in view that keeps the (lng, lat) points inside the picture."""
     zoom = MAX_ZOOM
     while zoom > 0:
-        xs, ys = zip(*(_world(zoom, lng, lat) for lng, lat in points), strict=True)
+        xs, ys = zip(*(_world(zoom, lng, lat) for lng, lat in points))
         if (
             max(xs) - min(xs) <= WIDTH * FILL_FRACTION
             and max(ys) - min(ys) <= HEIGHT * FILL_FRACTION
         ):
             break
         zoom -= 1
-    xs, ys = zip(*(_world(zoom, lng, lat) for lng, lat in points), strict=True)
+    xs, ys = zip(*(_world(zoom, lng, lat) for lng, lat in points))
     return View(zoom, (min(xs) + max(xs)) / 2 - WIDTH / 2, (min(ys) + max(ys)) / 2 - HEIGHT / 2)
 
 
@@ -119,7 +123,7 @@ def _basemap(view: View, fetch: TileFetcher | None) -> tuple[Image.Image, bool]:
     with ThreadPoolExecutor(max_workers=8) as pool:
         tiles = list(pool.map(lambda t: fetch(zoom, t[0] % count, t[1]), wanted))
     drawn = False
-    for (x, y), data in zip(wanted, tiles, strict=True):
+    for (x, y), data in zip(wanted, tiles):
         if data is None:
             continue
         try:
@@ -151,7 +155,7 @@ def _route(draw: ImageDraw.ImageDraw, pts: list[tuple[float, float]]) -> None:
     draw.line(scaled, fill=ROUTE_EDGE, width=SUPERSAMPLE * 17, joint="curve")
     draw.line(scaled, fill=ROUTE, width=SUPERSAMPLE * 12, joint="curve")
     gap = 80 * SUPERSAMPLE
-    for (x0, y0), (x1, y1) in zip(scaled, scaled[1:], strict=False):
+    for (x0, y0), (x1, y1) in zip(scaled, scaled[1:]):
         length = math.hypot(x1 - x0, y1 - y0)
         angle = math.atan2(y1 - y0, x1 - x0)
         for k in range(max(1, int(length // gap))):

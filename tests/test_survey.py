@@ -21,22 +21,22 @@ def test_grid_lines_are_parallel_and_evenly_spaced(atom2, square):
     pts = _xy(m)
     assert len(pts) % 2 == 0
     xs = sorted({round(p[0], 1) for p in pts})
-    gaps = [b - a for a, b in zip(xs, xs[1:], strict=False)]
+    gaps = [b - a for a, b in zip(xs, xs[1:])]
     assert gaps == pytest.approx([42.67] * len(gaps), abs=0.15)
     # north-south lines: both ends of every line share the same x
-    for (x0, _), (x1, _) in zip(pts[::2], pts[1::2], strict=True):
+    for (x0, _), (x1, _) in zip(pts[::2], pts[1::2]):
         assert x0 == pytest.approx(x1, abs=0.01)
 
 
 def test_serpentine_alternates_direction(atom2, square):
     pts = _xy(plan_survey(square, atom2, atom2.camera(), SurveyParams()))
-    dys = [b[1] - a[1] for a, b in zip(pts[::2], pts[1::2], strict=True)]
-    assert all(d1 * d2 < 0 for d1, d2 in zip(dys, dys[1:], strict=False))
+    dys = [b[1] - a[1] for a, b in zip(pts[::2], pts[1::2])]
+    assert all(d1 * d2 < 0 for d1, d2 in zip(dys, dys[1:]))
 
 
 def test_heading_rotates_lines(atom2, square):
     pts = _xy(plan_survey(square, atom2, atom2.camera(), SurveyParams(heading_deg=90)))
-    for (_, y0), (_, y1) in zip(pts[::2], pts[1::2], strict=True):
+    for (_, y0), (_, y1) in zip(pts[::2], pts[1::2]):
         assert y0 == pytest.approx(y1, abs=0.01)  # east-west lines
 
 
@@ -51,7 +51,7 @@ def test_double_grid_has_two_perpendicular_passes(atom2, square):
     double = plan_survey(square, atom2, atom2.camera(), SurveyParams(heading_deg=0, double=True))
     assert len(double.waypoints) > len(single.waypoints)
     pts = _xy(double)[len(single.waypoints) :]
-    for (_, y0), (_, y1) in zip(pts[::2], pts[1::2], strict=True):
+    for (_, y0), (_, y1) in zip(pts[::2], pts[1::2]):
         assert y0 == pytest.approx(y1, abs=0.01)
 
 
@@ -134,7 +134,7 @@ def test_long_axis_bearing():
 def test_default_heading_follows_long_axis(atom2):
     long_area = Polygon([(-46.0, -23.0), (-46.0, -22.998), (-45.9995, -22.998), (-45.9995, -23.0)])
     pts = _xy(plan_survey(long_area, atom2, atom2.camera(), SurveyParams()))
-    for (x0, _), (x1, _) in zip(pts[::2], pts[1::2], strict=True):
+    for (x0, _), (x1, _) in zip(pts[::2], pts[1::2]):
         assert x0 == pytest.approx(x1, abs=5)  # roughly north-south, along the long side
 
 

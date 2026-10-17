@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import math
 from dataclasses import dataclass
 
@@ -37,7 +39,7 @@ def _segments(geom: BaseGeometry) -> list[LineString]:
 def long_axis_bearing(area: BaseGeometry) -> float:
     """Compass bearing (0 <= b < 180, 0 = north) of the minimum rotated rectangle's long axis."""
     ring = area.minimum_rotated_rectangle.exterior.coords
-    (x1, y1), (x2, y2) = max(zip(ring, ring[1:], strict=False), key=lambda e: math.dist(*e))[:2]
+    (x1, y1), (x2, y2) = max(zip(ring, ring[1:]), key=lambda e: math.dist(*e))[:2]
     return math.degrees(math.atan2(x2 - x1, y2 - y1)) % 180
 
 

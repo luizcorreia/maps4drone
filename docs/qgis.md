@@ -25,8 +25,8 @@ temporizador da câmera no app.
 
 ## Requisitos
 
-- QGIS 3.28 ou superior (inclui QGIS 4 / Qt6). O núcleo exige **Python 3.10+**; em QGIS
-  que ainda usa Python 3.9 o plugin avisa e não carrega.
+- QGIS 3.28 ou superior (inclui QGIS 4 / Qt6). O núcleo exige **Python 3.9+**, o que cobre o QGIS 3.28
+  em diante; com Python mais antigo o plugin avisa e não carrega.
 - `shapely>=2` e `pyproj` no Python do QGIS. O QGIS já traz `pyproj`; `shapely` costuma
   faltar:
 

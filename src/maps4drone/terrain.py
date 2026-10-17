@@ -1,7 +1,6 @@
 import math
 from collections.abc import Sequence
 from dataclasses import replace
-from itertools import pairwise
 
 from .elevation import Elevation, LonLat
 from .geo import Projector
@@ -10,7 +9,7 @@ from .model import Waypoint
 
 def _densify(waypoints: Sequence[Waypoint], step_m: float, proj: Projector) -> list[Waypoint]:
     out = [waypoints[0]]
-    for a, b in pairwise(waypoints):
+    for a, b in zip(waypoints, waypoints[1:]):
         x0, y0 = proj.forward(a.lng, a.lat)
         x1, y1 = proj.forward(b.lng, b.lat)
         parts = max(1, math.ceil(math.hypot(x1 - x0, y1 - y0) / step_m))
@@ -40,7 +39,6 @@ def follow_terrain(
     route = _densify(waypoints, step_m, proj)
     levels = elevation([takeoff, *((w.lng, w.lat) for w in route)])
     base = levels[0]
-    return [
-        replace(w, height=altitude_m + ground - base)
-        for w, ground in zip(route, levels[1:], strict=True)
-    ]
+    if len(levels) != len(route) + 1:
+        raise ValueError("elevation service returned an unexpected number of values")
+    return [replace(w, height=altitude_m + ground - base) for w, ground in zip(route, levels[1:])]

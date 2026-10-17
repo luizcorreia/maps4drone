@@ -1,5 +1,7 @@
 """QGIS-independent helpers: plain coordinates in, core objects and attribute rows out."""
 
+from __future__ import annotations
+
 from collections.abc import Sequence
 from typing import Any
 

@@ -41,7 +41,7 @@ def open_meteo_elevation(timeout: float = 20.0) -> Elevation:
                 raise RuntimeError("elevation service returned an unexpected number of values")
             if len(_cache) > _CACHE_LIMIT:
                 _cache.clear()
-            _cache.update(zip(chunk, values, strict=True))
+            _cache.update(zip(chunk, values))
         return [_cache[_key(p)] for p in points]
 
     return lookup

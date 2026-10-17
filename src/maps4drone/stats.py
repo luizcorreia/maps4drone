@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import math
 from dataclasses import dataclass
 
@@ -23,7 +25,7 @@ def estimate(mission: Mission, intervals: tuple[float, ...] = (3.0, 5.0)) -> Sta
     pts = [(*proj.forward(w.lng, w.lat), w.height) for w in wps]
     distance = 0.0
     duration = float(sum(w.hover_time for w in wps))
-    for (a, b, c), (d, e, f), w in zip(pts, pts[1:], wps[1:], strict=False):
+    for (a, b, c), (d, e, f), w in zip(pts, pts[1:], wps[1:]):
         leg = math.dist((a, b, c), (d, e, f))
         distance += leg
         duration += leg / (w.speed or mission.speed_ms)

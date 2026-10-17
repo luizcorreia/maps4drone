@@ -1,5 +1,7 @@
 """Locate the maps4drone core, preferring the copy vendored next to the plugin."""
 
+from __future__ import annotations
+
 import importlib
 import sys
 from pathlib import Path
@@ -10,9 +12,9 @@ _PIP = "python -m pip install shapely pyproj"
 
 def ensure_core() -> str | None:
     """Make the core importable. Returns None on success, else a human-readable problem."""
-    if sys.version_info < (3, 10):  # noqa: UP036 - QGIS 3.28 can still ship Python 3.9
+    if sys.version_info < (3, 9):  # noqa: UP036 - very old QGIS builds
         return (
-            f"maps4drone needs Python 3.10 or newer, but this QGIS runs "
+            f"maps4drone needs Python 3.9 or newer, but this QGIS runs "
             f"Python {sys.version_info[0]}.{sys.version_info[1]}."
         )
     vendor = HERE / "vendor"

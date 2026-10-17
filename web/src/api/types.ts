@@ -120,6 +120,21 @@ export interface ImportResult {
   line: Extract<Geometry, { type: "LineString" }> | null;
 }
 
+/** The bits of WebODM's own API the project/task picker needs. */
+export interface WebodmProject {
+  id: number;
+  name: string;
+  tasks: string[];
+}
+
+export interface WebodmTask {
+  id: string;
+  name: string | null;
+  /** 40 means completed. */
+  status: number | null;
+  available_assets: string[] | null;
+}
+
 export interface MissionFile {
   blob: Blob;
   filename: string;

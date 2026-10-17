@@ -5,6 +5,8 @@ import type {
   PlanRequest,
   PlanResult,
   TaskContext,
+  WebodmProject,
+  WebodmTask,
 } from "./types";
 
 export class ApiError extends Error {
@@ -113,4 +115,20 @@ export async function importFile(file: File, signal?: AbortSignal): Promise<Impo
     signal,
   );
   return (await res.json()) as ImportResult;
+}
+
+/** True when the page is the WebODM plugin's, so WebODM's own API is there to talk to. */
+export const insideWebodm = (): boolean => import.meta.env.VITE_WEBODM === "true";
+
+export async function fetchProjects(signal?: AbortSignal): Promise<WebodmProject[]> {
+  return (await (await request("/api/projects/", { signal })).json()) as WebodmProject[];
+}
+
+export async function fetchProjectTasks(
+  projectId: number,
+  signal?: AbortSignal,
+): Promise<WebodmTask[]> {
+  return (await (
+    await request(`/api/projects/${projectId.toString()}/tasks/`, { signal })
+  ).json()) as WebodmTask[];
 }

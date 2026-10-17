@@ -739,11 +739,49 @@ button.link {
   }
 }
 
-.task-chip {
-  margin-left: auto;
+.back-link {
   padding: 4px 10px;
   border: 1px solid var(--border);
-  border-radius: 999px;
-  background: var(--surface-2);
+  border-radius: 6px;
+  color: var(--text);
   font-size: 0.8125rem;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.back-link:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.task-picker {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.task-picker select {
+  width: auto;
+  max-width: 240px;
+  padding: 4px 8px;
+  font-size: 0.8125rem;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+@media (max-width: 800px) {
+  .tagline {
+    display: none;
+  }
+
+  .task-picker select {
+    max-width: 130px;
+  }
 }

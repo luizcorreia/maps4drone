@@ -64,6 +64,7 @@ interface State {
 
   loadDrones: () => Promise<void>;
   loadTask: (id: string) => Promise<void>;
+  clearTask: () => void;
   setDemSource: (source: DemSource) => void;
   setMode: (mode: Mode) => void;
   setDrone: (id: string) => void;
@@ -200,6 +201,11 @@ export const useStore = create<State>()((set, get) => {
       } catch (err) {
         set({ status: "error", error: err instanceof Error ? err.message : String(err) });
       }
+    },
+
+    clearTask: () => {
+      set({ task: null, demSource: "online" });
+      replan();
     },
 
     setDemSource: (demSource) => {

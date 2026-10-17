@@ -31,8 +31,10 @@ recusa um nome que já existe).
 
 - Em cada tarefa com mapa (ortofoto, DSM ou DTM) aparece o botão **Planejar voo**. Ele abre o
   planejador já no projeto: o mapa começa na extensão da tarefa, com a ortofoto como fundo.
-- O item **Planejar voo** do menu lateral abre o planejador sem tarefa (mapas de rua, satélite e
-  híbrido, e elevação online).
+- O item **Planejar voo** do menu lateral abre o planejador sem tarefa. No cabeçalho, escolha o
+  **projeto** e a **tarefa** (só aparecem as concluídas que têm ortofoto, DSM ou DTM) para planejar
+  sobre ela; "Sem projeto" volta aos mapas públicos (rua, satélite, híbrido) e à elevação online.
+  O botão **← WebODM** volta ao painel, direto ao projeto quando há tarefa aberta.
 - Os quatro passos são os da [interface web](web.md). Em **Ajustes**, ao ligar "Acompanhar o
   terreno" e marcar a decolagem, escolha o **modelo de elevação**: DSM do projeto (padrão, já passa
   por cima de árvores e construções), DTM do projeto (só o chão) ou online. O DTM só existe se a

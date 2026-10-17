@@ -14,6 +14,10 @@
   --m4d-danger: #f85149;
 }
 
+:root {
+  color-scheme: dark;
+}
+
 html,
 body {
   background: var(--m4d-bg);
@@ -199,4 +203,614 @@ span.close-button,
 span.leaflet-control-autolayers-close,
 span.leaflet-control-measure-close-button {
   filter: invert(1);
+}
+
+/* ------------------------------------------------------------------------------------------
+   Django admin (Administração > Contas, Tema, Plugins, Configurações...)
+   Django 2.2's admin paints its own light surfaces and grey text; WebODM tints its headings
+   teal. Everything below puts those on the planner's palette: a surface layer (--m4d-surface)
+   for modules and tables, a raised layer (--m4d-surface-2) for headings and toolbars, and the
+   accent only for links and the one primary action of a form.
+   ------------------------------------------------------------------------------------------ */
+
+::selection {
+  background: color-mix(in srgb, var(--m4d-accent) 40%, transparent);
+  color: var(--m4d-text);
+}
+
+::placeholder {
+  color: var(--m4d-muted);
+  opacity: 1;
+}
+
+:focus-visible {
+  outline: 2px solid var(--m4d-accent);
+  outline-offset: 1px;
+}
+
+.admin-area #content h1,
+.admin-area #content h2,
+.admin-area #content h3,
+.admin-area #content-main h1 {
+  color: var(--m4d-text);
+}
+
+.admin-area div.breadcrumbs,
+.admin-area div.breadcrumbs a {
+  background: transparent;
+  color: var(--m4d-muted);
+}
+
+.admin-area div.breadcrumbs a:hover {
+  color: var(--m4d-accent);
+}
+
+/* modules, fieldsets and the headings that top them */
+.admin-area .module,
+.admin-area fieldset.module,
+.admin-area .inline-group,
+.admin-area #content-related .module,
+.admin-area .selector,
+.admin-area .calendarbox,
+.admin-area .clockbox {
+  background: var(--m4d-surface);
+  border: 1px solid var(--m4d-border);
+  border-radius: 8px;
+  color: var(--m4d-text);
+}
+
+.admin-area .module h2,
+.admin-area .module caption,
+.admin-area .inline-group h2,
+.admin-area .module h3,
+.admin-area fieldset.module h2,
+.admin-area .selector .selector-available h2,
+.admin-area .selector .selector-chosen h2 {
+  background: var(--m4d-surface-2);
+  border-bottom: 1px solid var(--m4d-border);
+  color: var(--m4d-text);
+  font-weight: 600;
+}
+
+.admin-area .module h2 a,
+.admin-area .module caption a {
+  color: var(--m4d-text);
+}
+
+.admin-area .module table,
+.admin-area .module td,
+.admin-area .module th,
+.admin-area .form-row,
+.admin-area .aligned .form-row {
+  border-color: var(--m4d-border);
+}
+
+.admin-area .form-row label,
+.admin-area .aligned label,
+.admin-area .form-row strong {
+  color: var(--m4d-text);
+}
+
+.admin-area .help,
+.admin-area p.help,
+.admin-area .timezonewarning,
+.admin-area .mini.quiet,
+.admin-area .quiet {
+  color: var(--m4d-muted);
+}
+
+.admin-area .required label,
+.admin-area label.required {
+  font-weight: 600;
+}
+
+/* change lists */
+.admin-area #toolbar,
+.admin-area #changelist .actions,
+.admin-area #changelist-filter,
+.admin-area .paginator,
+.admin-area .submit-row {
+  background: var(--m4d-surface);
+  border-color: var(--m4d-border);
+  color: var(--m4d-text);
+}
+
+.admin-area #changelist-filter h2,
+.admin-area #changelist-filter h3 {
+  background: var(--m4d-surface-2);
+  color: var(--m4d-text);
+}
+
+.admin-area #changelist-filter li.selected a {
+  color: var(--m4d-accent);
+}
+
+.admin-area #changelist table thead th,
+.admin-area #changelist table thead th a,
+.admin-area .module table thead th {
+  background: var(--m4d-surface-2);
+  border-color: var(--m4d-border);
+  color: var(--m4d-muted);
+  font-weight: 600;
+}
+
+.admin-area #changelist table thead th.sorted {
+  background: color-mix(in srgb, var(--m4d-accent) 10%, var(--m4d-surface-2));
+}
+
+.admin-area #changelist table tbody td,
+.admin-area #changelist table tbody th,
+.admin-area tr.row1 td,
+.admin-area tr.row1 th,
+.admin-area tr.row2 td,
+.admin-area tr.row2 th {
+  background: var(--m4d-surface);
+  border-color: var(--m4d-border);
+  color: var(--m4d-text);
+}
+
+.admin-area tr.row2 td,
+.admin-area tr.row2 th {
+  background: color-mix(in srgb, var(--m4d-surface-2) 55%, var(--m4d-surface));
+}
+
+.admin-area #changelist table tbody tr:hover td,
+.admin-area #changelist table tbody tr:hover th {
+  background: var(--m4d-surface-2);
+}
+
+.admin-area #changelist table tbody tr.selected td,
+.admin-area #changelist table tbody tr.selected th {
+  background: color-mix(in srgb, var(--m4d-accent) 14%, var(--m4d-surface));
+}
+
+.admin-area .paginator a:link,
+.admin-area .paginator a:visited {
+  background: var(--m4d-surface-2);
+  color: var(--m4d-text);
+}
+
+.admin-area .paginator .this-page {
+  color: var(--m4d-accent);
+  font-weight: 700;
+}
+
+/* actions on the page: raised neutral, the accent only on hover */
+.admin-area .object-tools a,
+.admin-area .object-tools a:link,
+.admin-area .object-tools a:visited,
+.admin-area a.addlink,
+.admin-area a.historylink,
+.admin-area a.viewsitelink {
+  background: var(--m4d-surface-2);
+  border: 1px solid var(--m4d-border);
+  border-radius: 6px;
+  color: var(--m4d-text);
+}
+
+.admin-area .object-tools a:hover,
+.admin-area .object-tools a:focus {
+  background: var(--m4d-surface-2);
+  border-color: var(--m4d-accent);
+  color: var(--m4d-accent);
+}
+
+.admin-area input[type="submit"],
+.admin-area input[type="button"],
+.admin-area .button,
+.admin-area a.button,
+.admin-area button.button,
+.admin-area .submit-row input {
+  background: var(--m4d-surface-2);
+  border: 1px solid var(--m4d-border);
+  border-radius: 6px;
+  color: var(--m4d-text);
+  font-weight: 600;
+}
+
+.admin-area input[type="submit"]:hover,
+.admin-area .button:hover,
+.admin-area a.button:hover,
+.admin-area .submit-row input:hover {
+  background: var(--m4d-surface-2);
+  border-color: var(--m4d-accent);
+  color: var(--m4d-accent);
+}
+
+/* the one primary action of a form */
+.admin-area .submit-row input.default,
+.admin-area input[type="submit"].default,
+.admin-area .submit-row input[name="_save"] {
+  background: var(--m4d-accent);
+  border-color: var(--m4d-accent);
+  color: var(--m4d-bg);
+}
+
+.admin-area .submit-row input.default:hover,
+.admin-area .submit-row input[name="_save"]:hover {
+  background: var(--m4d-accent);
+  color: var(--m4d-bg);
+  filter: brightness(1.1);
+}
+
+.admin-area .submit-row a.deletelink,
+.admin-area .submit-row a.deletelink:link,
+.admin-area a.deletelink {
+  background: transparent;
+  border: 1px solid var(--m4d-danger);
+  border-radius: 6px;
+  color: var(--m4d-danger);
+}
+
+.admin-area .submit-row a.deletelink:hover {
+  background: var(--m4d-danger);
+  color: var(--m4d-bg);
+}
+
+.admin-area li.deletelink,
+.admin-area li.deletelink a {
+  color: var(--m4d-danger);
+}
+
+/* admin links: accent text; the green/red icons of boolean columns keep their meaning */
+.admin-area .module a,
+.admin-area #content a:link,
+.admin-area #content a:visited {
+  color: var(--m4d-accent);
+}
+
+.admin-area #content a.button,
+.admin-area #content a.button:link,
+.admin-area #content a.button:visited,
+.admin-area #content .object-tools a,
+.admin-area #content a.addlink,
+.admin-area #content a.historylink,
+.admin-area #content a.deletelink {
+  color: inherit;
+}
+
+/* filter_horizontal pickers and their lookups */
+.admin-area .selector select,
+.admin-area .selector input[type="text"],
+.admin-area .selector-filter input {
+  background: var(--m4d-surface-2);
+  border-color: var(--m4d-border);
+  color: var(--m4d-text);
+}
+
+.admin-area .selector-filter {
+  background: var(--m4d-surface);
+  border-color: var(--m4d-border);
+  color: var(--m4d-muted);
+}
+
+.admin-area .selector ul.selector-chooser {
+  background: var(--m4d-surface-2);
+}
+
+.admin-area a.selector-chooseall,
+.admin-area a.selector-clearall,
+.admin-area .selector .selector-chooser a {
+  color: var(--m4d-accent);
+}
+
+.admin-area .calendar caption,
+.admin-area .calendarbox h2,
+.admin-area .clockbox h2 {
+  background: var(--m4d-surface-2);
+  color: var(--m4d-text);
+}
+
+.admin-area .calendar td,
+.admin-area .calendar th,
+.admin-area .calendarbox .calendarnav {
+  background: var(--m4d-surface);
+  color: var(--m4d-text);
+}
+
+.admin-area .calendar td a,
+.admin-area .timelist a {
+  background: var(--m4d-surface-2);
+  color: var(--m4d-text);
+}
+
+/* messages and errors: a tint of the state colour, never a flat colour block */
+.admin-area .messagelist li {
+  background: var(--m4d-surface-2);
+  border: 1px solid var(--m4d-border);
+  border-radius: 6px;
+  color: var(--m4d-text);
+}
+
+.admin-area .messagelist li.success,
+.admin-area .messagelist li.info {
+  background: color-mix(in srgb, var(--m4d-ok) 14%, var(--m4d-surface));
+  border-color: color-mix(in srgb, var(--m4d-ok) 45%, var(--m4d-border));
+}
+
+.admin-area .messagelist li.warning {
+  background: color-mix(in srgb, var(--m4d-warn) 14%, var(--m4d-surface));
+  border-color: color-mix(in srgb, var(--m4d-warn) 45%, var(--m4d-border));
+}
+
+.admin-area .messagelist li.error,
+.admin-area .errornote {
+  background: color-mix(in srgb, var(--m4d-danger) 14%, var(--m4d-surface));
+  border: 1px solid color-mix(in srgb, var(--m4d-danger) 45%, var(--m4d-border));
+  color: var(--m4d-text);
+}
+
+.admin-area ul.errorlist li {
+  background: transparent;
+  color: var(--m4d-danger);
+}
+
+.admin-area .errors input,
+.admin-area .errors select,
+.admin-area .errors textarea {
+  border-color: var(--m4d-danger);
+}
+
+/* inline forms, recent actions, tabular inlines */
+.admin-area .inline-related h3,
+.admin-area .tabular .inline_label,
+.admin-area .inline-related fieldset h2 {
+  background: var(--m4d-surface-2);
+  color: var(--m4d-text);
+}
+
+.admin-area .actionlist li {
+  border-color: var(--m4d-border);
+}
+
+.admin-area #recent-actions-module h2,
+.admin-area #content-related h3 {
+  background: transparent;
+  color: var(--m4d-text);
+}
+
+/* CodeMirror (the theme's CSS and HTML fields) */
+.CodeMirror {
+  background: var(--m4d-surface-2);
+  border: 1px solid var(--m4d-border);
+  border-radius: 6px;
+  color: var(--m4d-text);
+}
+
+.CodeMirror-gutters {
+  background: var(--m4d-surface);
+  border-right: 1px solid var(--m4d-border);
+}
+
+.CodeMirror-linenumber {
+  color: var(--m4d-muted);
+}
+
+.CodeMirror-cursor {
+  border-left-color: var(--m4d-text);
+}
+
+.CodeMirror-selected,
+.CodeMirror-focused .CodeMirror-selected {
+  background: color-mix(in srgb, var(--m4d-accent) 30%, transparent);
+}
+
+.cm-s-default .cm-keyword,
+.cm-s-default .cm-tag {
+  color: #ff7b72;
+}
+
+.cm-s-default .cm-string,
+.cm-s-default .cm-attribute {
+  color: #a5d6ff;
+}
+
+.cm-s-default .cm-number,
+.cm-s-default .cm-atom,
+.cm-s-default .cm-qualifier {
+  color: #79c0ff;
+}
+
+.cm-s-default .cm-property,
+.cm-s-default .cm-variable,
+.cm-s-default .cm-variable-2 {
+  color: var(--m4d-text);
+}
+
+.cm-s-default .cm-comment {
+  color: var(--m4d-muted);
+}
+
+.cm-s-default .cm-def,
+.cm-s-default .cm-builtin {
+  color: #d2a8ff;
+}
+
+/* what the first pass missed, found by scanning the rendered pages */
+.admin-area h1,
+.admin-area #content-main h1 {
+  color: var(--m4d-text);
+}
+
+.admin-area #changelist #toolbar form input,
+.admin-area #changelist #toolbar form input[type="text"] {
+  background: var(--m4d-surface-2);
+  border: 1px solid var(--m4d-border);
+  border-radius: 6px;
+  color: var(--m4d-text);
+}
+
+.admin-area #changelist #toolbar form input[type="submit"] {
+  color: var(--m4d-text);
+}
+
+.admin-area #content-related {
+  background: var(--m4d-surface);
+  border: 1px solid var(--m4d-border);
+  border-radius: 8px;
+  color: var(--m4d-text);
+}
+
+.admin-area select {
+  background: var(--m4d-surface-2);
+  color: var(--m4d-text);
+}
+
+.admin-area select option {
+  background: var(--m4d-surface-2);
+  color: var(--m4d-text);
+}
+
+.admin-area input[type="checkbox"],
+.admin-area input[type="radio"] {
+  accent-color: var(--m4d-accent);
+}
+
+.admin-area .cm-s-default .cm-variable-3,
+.admin-area .cm-s-default .cm-type {
+  color: #7ee787;
+}
+
+/* rules the admin writes with ids, which the class selectors above cannot outweigh */
+.admin-area #changelist #toolbar,
+.admin-area #changelist .paginator,
+.admin-area #changelist .actions {
+  background: var(--m4d-surface);
+  border-color: var(--m4d-border);
+  color: var(--m4d-text);
+}
+
+.admin-area .row1,
+.admin-area .row2 {
+  background: var(--m4d-surface);
+}
+
+.admin-area #changelist .actions select,
+.admin-area #changelist .actions label,
+.admin-area #changelist .actions .action-counter {
+  background: var(--m4d-surface-2);
+  color: var(--m4d-text);
+}
+
+.admin-area #changelist .actions .action-counter {
+  background: transparent;
+  color: var(--m4d-muted);
+}
+
+.admin-area #content-related .module h2,
+.admin-area #content-related h3 {
+  background: transparent;
+  border: 0;
+  color: var(--m4d-text);
+}
+
+.admin-area p.datetime,
+.admin-area p.url,
+.admin-area p.file-upload,
+.admin-area p.time,
+.admin-area p.date,
+.admin-area .datetime,
+.admin-area .file-upload {
+  color: var(--m4d-muted);
+}
+
+.admin-area a:link,
+.admin-area a:visited {
+  color: var(--m4d-accent);
+}
+
+.admin-area a.button:link,
+.admin-area a.button:visited,
+.admin-area .object-tools a:link,
+.admin-area .object-tools a:visited,
+.admin-area a.addlink:link,
+.admin-area a.historylink:link,
+.admin-area a.viewsitelink:link {
+  color: var(--m4d-text);
+}
+
+.admin-area a.deletelink:link,
+.admin-area a.deletelink:visited {
+  color: var(--m4d-danger);
+}
+
+.admin-area .submit-row a.deletelink:hover {
+  color: var(--m4d-bg);
+}
+
+/* the JSON/code viewer on a processing node's page (prettify) */
+.prettyprint {
+  background: var(--m4d-surface-2);
+  border: 1px solid var(--m4d-border);
+  color: var(--m4d-text);
+}
+
+.prettyprint .pln {
+  color: var(--m4d-text);
+}
+
+.prettyprint .str,
+.prettyprint .atv {
+  color: #a5d6ff;
+}
+
+.prettyprint .kwd {
+  color: #ff7b72;
+}
+
+.prettyprint .com {
+  color: var(--m4d-muted);
+}
+
+.prettyprint .typ,
+.prettyprint .tag {
+  color: #7ee787;
+}
+
+.prettyprint .lit,
+.prettyprint .atn {
+  color: #79c0ff;
+}
+
+.prettyprint .pun,
+.prettyprint .opn,
+.prettyprint .clo {
+  color: var(--m4d-muted);
+}
+
+.prettyprint .dec,
+.prettyprint .var,
+.prettyprint .fun {
+  color: #d2a8ff;
+}
+
+/* the "Ir" button of the bulk actions, and the sort arrows of the column heads */
+.admin-area #changelist .actions button,
+.admin-area #changelist .actions .button {
+  background: var(--m4d-surface-2);
+  border: 1px solid var(--m4d-border);
+  border-radius: 6px;
+  color: var(--m4d-text);
+}
+
+.admin-area #changelist .actions button:hover {
+  border-color: var(--m4d-accent);
+  color: var(--m4d-accent);
+}
+
+.admin-area #changelist table thead th .sortoptions {
+  opacity: 0.7;
+}
+
+/* on a phone the object tools (Adicionar...) float over the page title: let them sit above it */
+@media (max-width: 767px) {
+  .admin-area .object-tools {
+    float: none;
+    margin: 0 0 12px;
+    padding: 0;
+  }
+
+  .admin-area #content h1 {
+    margin-top: 4px;
+  }
 }

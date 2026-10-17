@@ -98,6 +98,13 @@ python scripts/install_webodm_theme.py ... --activate                # criar ou 
 python scripts/install_webodm_theme.py ... --activate-theme Default  # voltar ao tema original
 ```
 
+O CSS cobre também o admin do Django (listas, formulários, tabelas, seletores, mensagens, editores de
+código) e o visualizador de JSON dos nós de processamento. O WebODM prefixa o CSS do admin com
+`.admin-area`, então as regras do tema usam o mesmo prefixo para ter a mesma especificidade. A
+verificação foi feita varrendo 17 páginas e medindo o contraste de cada texto renderizado: ficaram só
+dois falsos positivos (o campo de cor do admin, que herda a cor escolhida, e o rótulo escondido do
+botão de medida do mapa).
+
 O script cria o tema "maps4drone" (ou o atualiza, se já existir) pelo formulário do admin e pode
 ativá-lo; o tema vale para todos os usuários do WebODM. Dá para fazer à mão também: copie as
 cores e o CSS em Administração > Tema e escolha o tema em Configurações.
